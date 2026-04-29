@@ -47,38 +47,29 @@ FunctionEnd
 
 ## Build Scripts
 
-| Script                        | Versione | Toolset       |
-| ----------------------------- | -------- | ------------- |
-| `build_plugin_vs2022.py`      | 19.00    | VS2022 (v143) |
-| `build_plugin_vs2026.py`      | 19.00    | VS2026 (v145) |
-| `build_plugin_2501_vs2022.py` | 25.01    | VS2022 (v143) |
-| `build_plugin_2501_vs2026.py` | 25.01    | VS2026 (v145) |
-| `build_plugin_2600_vs2026.py` | 26.00    | VS2026 (v145) |
+Il repo include un unico script unificato `build_plugin.py` che sostituisce i precedenti script per-versione.
 
 ### Compilazione
 
 ```powershell
-cd ns7zip
+# Raccomandato: 7-Zip 26.00 con toolset rilevato automaticamente
+python build_plugin.py
 
-# Versione 26.00 (consigliata)
-python build_plugin_2600_vs2026.py
+# Seleziona versione 7-Zip (19.00 | 25.01 | 26.00)
+python build_plugin.py --7zip-version 25.01
 
-# Versione 25.01
-python build_plugin_2501_vs2026.py
+# Toolset specifico (2022|2026|auto)
+python build_plugin.py --toolset 2022
 
-# Versione 19.00
-python build_plugin_vs2026.py
+# Stampa versione ed esce
+python build_plugin.py --version
 ```
 
 ## Struttura Repository
 
 ```
 ns7zip/
-├── build_plugin_vs2022.py       # Build 19.00 VS2022
-├── build_plugin_vs2026.py       # Build 19.00 VS2026
-├── build_plugin_2501_vs2022.py  # Build 25.01 VS2022
-├── build_plugin_2501_vs2026.py  # Build 25.01 VS2026
-├── build_plugin_2600_vs2026.py  # Build 26.00 VS2026
+├── build_plugin.py              # Script di build unificato (tutte le versioni)
 ├── rebuild_nsis7z1900-src.ps1   # Ricostruisce sorgenti 19.00
 ├── 7zip-19.00/                  # 7-Zip 19.00 modificato
 ├── 7zip-25.01/                  # 7-Zip 25.01 modificato (ZIP + NSIS handler)
