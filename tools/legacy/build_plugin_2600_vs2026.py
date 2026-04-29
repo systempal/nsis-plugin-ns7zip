@@ -121,11 +121,12 @@ def find_msbuild(vs_version: str = 'auto') -> 'Optional[Tuple[Path, str, str]]':
                 return msbuild_path, _VS_TOOLSET[version], version
     return None
 
-def get_project_paths() -> Tuple[Path, Path, Path]:
+def get_project_paths(toolset: str = 'v145') -> Tuple[Path, Path, Path]:
     """Get project directory, project file, and plugins directory"""
     script_dir = Path(__file__).parent.absolute()
     project_dir = script_dir.parent.parent / 'versions' / '26.00'
-    project_file = project_dir / 'CPP' / '7zip' / 'Bundles' / 'Nsis7z' / 'Nsis7z_vs2026.vcxproj'
+    vcxproj = 'Nsis7z_vs2026.vcxproj' if toolset == 'v145' else 'Nsis7z.vcxproj'
+    project_file = project_dir / 'CPP' / '7zip' / 'Bundles' / 'Nsis7z' / vcxproj
     plugins_dir = script_dir.parent.parent / 'plugins'
     
     return project_dir, project_file, plugins_dir
@@ -256,7 +257,8 @@ def build_configuration(
     parallel: bool = True,
     optimizations: bool = True,
     counter: str = "",
-    capture_output: bool = False
+    capture_output: bool = False,
+    toolset: str = 'v145',
 ) -> Tuple[bool, float, str]:
     """Build a single configuration
     
@@ -274,7 +276,7 @@ def build_configuration(
         f'/p:OutDir=Build\\{config.name}\\',
         f'/p:IntDir=Build\\{config.name}\\obj\\',
         '/p:WindowsTargetPlatformVersion=10.0',
-        '/p:PlatformToolset=v145',
+        f'/p:PlatformToolset={toolset}',
         f'/v:{verbosity}',
     ]
     
@@ -506,6 +508,7 @@ def _build_configs_parallel(
     optimizations: bool,
     project_dir: Path,
     plugins_dir: Path,
+    toolset: str = 'v145',
 ) -> list:
     """Build all configurations simultaneously, printing output atomically.
 
@@ -525,7 +528,7 @@ def _build_configs_parallel(
             msbuild_path, project_file, config,
             rebuild=rebuild, verbosity=verbosity,
             parallel=parallel, optimizations=optimizations,
-            capture_output=True,
+            capture_output=True, toolset=toolset,
         )
         import io
         import contextlib
@@ -685,8 +688,15 @@ Examples:
 
     args = parser.parse_args()
     
-    # Get project paths early for list-project
-    project_dir, project_file, plugins_dir = get_project_paths()
+    # Find MSBuild early (needed for project path selection)
+    msbuild_result = find_msbuild(args.vs_version)
+    if not msbuild_result:
+        print("ERROR: MSBuild not found!")
+        return 1
+    msbuild_path, platform_toolset, vs_version_name = msbuild_result
+
+    # Get project paths (project file depends on toolset)
+    project_dir, project_file, plugins_dir = get_project_paths(platform_toolset)
     
     # List project configurations
     if args.list_project:
@@ -706,22 +716,7 @@ Examples:
         print("\nUse --list-project to see all configurations in the .vcxproj file")
         return 0
     
-    # Find MSBuild
-    msbuild_result = find_msbuild(args.vs_version)
-    if not msbuild_result:
-        print("ERROR: MSBuild not found!")
-        print()
-        print("Visual Studio 2026 Build Tools not found.")
-        print("Checked locations:")
-        print("  - C:\\Program Files\\Microsoft Visual Studio\\2026\\")
-        print("  - C:\\Program Files (x86)\\Microsoft Visual Studio\\18\\")
-        print("  - C:\\BuildTools\\")
-        print()
-        print("To install VS2026 Build Tools:")
-        print("  choco install visualstudio2026buildtools")
-        return 1
-    msbuild_path, platform_toolset, vs_version_name = msbuild_result
-    
+    # Find MSBuild (already done above, but keep for reference)
     if not project_file.exists():
         print(f"ERROR: Project file not found: {project_file}")
         print()
@@ -763,7 +758,8 @@ Examples:
         success1, time1, _ = build_configuration(
             msbuild_path, project_file, config,
             rebuild=True, verbosity=args.verbosity,
-            parallel=args.parallel, optimizations=False
+            parallel=args.parallel, optimizations=False,
+            toolset=platform_toolset,
         )
         
         if success1:
@@ -774,7 +770,8 @@ Examples:
         success2, time2, _ = build_configuration(
             msbuild_path, project_file, config,
             rebuild=True, verbosity=args.verbosity,
-            parallel=args.parallel, optimizations=True
+            parallel=args.parallel, optimizations=True,
+            toolset=platform_toolset,
         )
         
         if success2:
@@ -809,6 +806,7 @@ Examples:
             rebuild=args.rebuild, verbosity=args.verbosity,
             parallel=args.parallel, optimizations=use_optimizations,
             project_dir=project_dir, plugins_dir=plugins_dir,
+            toolset=platform_toolset,
         )
     else:
         for i, config in enumerate(configs_to_build, 1):
@@ -821,7 +819,8 @@ Examples:
                 verbosity=args.verbosity,
                 parallel=args.parallel,
                 optimizations=use_optimizations,
-                counter=f"{i}/{len(configs_to_build)}"
+                counter=f"{i}/{len(configs_to_build)}",
+                toolset=platform_toolset,
             )
 
             if not success:
