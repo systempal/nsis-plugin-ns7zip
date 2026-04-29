@@ -865,7 +865,7 @@ Examples:
     print("\n" + "-" * 50)
     print("Build Summary:")
     for config, success, build_time, file_size, dest_path in build_results:
-        status = "✓" if success else "✗"
+        status = "OK" if success else "FAIL"
         size_str = f"{file_size:,} bytes" if file_size > 0 else "N/A"
         print(f"  {status} {config.name:15s} - {format_time(build_time):8s} - {size_str}")
     print("-" * 50)
