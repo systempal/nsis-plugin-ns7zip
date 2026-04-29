@@ -8,6 +8,13 @@ from __future__ import annotations
 import argparse, subprocess, sys
 from pathlib import Path
 
+
+class Colors:
+    CYAN = "\033[36m";  GREEN = "\033[32m";  YELLOW = "\033[33m"
+    RED = "\033[31m";   GRAY = "\033[90m";   RESET = "\033[0m"
+    BOLD = "\033[1m";   BRIGHT_CYAN = "\033[96m"
+
+
 ROOT = Path(__file__).resolve().parent
 SCRIPTS = {
     "19.00": {"2022": "tools/legacy/build_plugin_vs2022.py",
@@ -33,6 +40,10 @@ def main() -> int:
     if known.version:
         print((ROOT / "VERSION").read_text(encoding="utf-8-sig").strip())
         return 0
+
+    ver = (ROOT / "VERSION").read_text(encoding="utf-8-sig").strip()
+    print(f"{Colors.BOLD}{Colors.BRIGHT_CYAN}=== Building ns7zip v{ver} "
+          f"(7z {known.zip_version}) ==={Colors.RESET}")
 
     toolset = known.toolset
     if toolset == "auto":

@@ -52,7 +52,16 @@ jobs:
           "version=$v" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
 
       - name: Build ${{ matrix.config }}
-        run: python build_plugin.py --config ${{ matrix.config }} --verbose
+        run: python build_plugin.py --configs ${{ matrix.config }}
+
+      - name: Collect DLL
+        shell: pwsh
+        run: |
+          $map = @{ 'x86-ansi' = 'x86-ansi'; 'x86-unicode' = 'x86-unicode'; 'x64-unicode' = 'amd64-unicode' }
+          $src = "plugins\$($map['${{ matrix.config }}'])\nsis7z.dll"
+          $dst = "dist\${{ matrix.config }}"
+          New-Item -ItemType Directory -Force -Path $dst | Out-Null
+          Copy-Item $src $dst
 
       - name: Upload DLL
         uses: actions/upload-artifact@v4

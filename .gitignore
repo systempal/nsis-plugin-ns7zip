@@ -60,7 +60,6 @@ desktop.ini
 # Migration/automation scripts (temporary, contain tokens — never commit)
 tools/t*.py
 tools/check_*.py
-tools/legacy/
 
 # Plugin-specific
 versions/*/CPP/7zip/*/Release/
