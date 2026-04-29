@@ -1,24 +1,24 @@
 # Nsis7z NSIS Plugin
 
-**Plugin NSIS per l'estrazione di archivi 7z, ZIP e NSIS**
+NSIS plugin for extracting 7z, ZIP and NSIS archives.
 
 ---
 
-## Versioni Disponibili
+## Available Versions
 
-| Versione                          | 7-Zip       | Formati                            | Note                          |
-| --------------------------------- | ----------- | ---------------------------------- | ----------------------------- |
-| [19.00](7zip-19.00/README.md)     | 7-Zip 19.00 | 7z, LZMA, XZ, Split                | Versione originale aggiornata |
-| [25.01](7zip-25.01/README.md)     | 7-Zip 25.01 | 7z, ZIP, LZMA, XZ, Split, **NSIS** | Con supporto NSIS archive     |
-| [**26.00**](7zip-26.00/README.md) | 7-Zip 26.00 | 7z, ZIP, LZMA, XZ, Split, **NSIS** | **Consigliata**               |
+| Version | 7-Zip | Formats | Notes |
+|---------|-------|---------|-------|
+| [19.00](7zip-19.00/README.md) | 7-Zip 19.00 | 7z, LZMA, XZ, Split | Original updated version |
+| [25.01](7zip-25.01/README.md) | 7-Zip 25.01 | 7z, ZIP, LZMA, XZ, Split, **NSIS** | With NSIS archive support |
+| [**26.00**](7zip-26.00/README.md) | 7-Zip 26.00 | 7z, ZIP, LZMA, XZ, Split, **NSIS** | **Recommended** |
 
-## Architetture Supportate
+## Supported Architectures
 
-| Architettura      | Descrizione          |
-| ----------------- | -------------------- |
-| x86-ansi          | 32-bit ANSI (legacy) |
-| x86-unicode       | 32-bit Unicode       |
-| **amd64-unicode** | 64-bit Unicode       |
+| Architecture | Description |
+|--------------|-------------|
+| x86-ansi | 32-bit ANSI (legacy) |
+| x86-unicode | 32-bit Unicode |
+| **amd64-unicode** | 64-bit Unicode |
 
 ## Quick Start
 
@@ -26,13 +26,13 @@
 !addplugindir "plugins\x86-unicode"
 
 Section
-  ; Estrazione semplice (7z, ZIP, NSIS)
+  ; Simple extraction (7z, ZIP, NSIS)
   Nsis7z::Extract "$EXEDIR\data.7z"
 
-  ; Con testo di progresso nella label
+  ; With progress text in label
   Nsis7z::ExtractWithDetails "$EXEDIR\data.7z" "Installing %s..."
 
-  ; Con callback per mostrare i file nella listbox
+  ; With callback to show files in listbox
   GetFunctionAddress $0 MyExtractCallback
   Nsis7z::ExtractWithFileCallback "$EXEDIR\data.7z" $0
 SectionEnd
@@ -47,57 +47,61 @@ FunctionEnd
 
 ## Build Scripts
 
-Il repo include un unico script unificato `build_plugin.py` che sostituisce i precedenti script per-versione.
+The repo includes a single unified `build_plugin.py` script that replaces the previous per-version scripts.
 
-### Compilazione
+### Build
 
 ```powershell
-# Raccomandato: 7-Zip 26.00 con toolset rilevato automaticamente
+# Recommended: 7-Zip 26.00 with auto-detected toolset
 python build_plugin.py
 
-# Seleziona versione 7-Zip (19.00 | 25.01 | 26.00)
+# Select 7-Zip version (19.00 | 25.01 | 26.00)
 python build_plugin.py --7zip-version 25.01
 
-# Toolset specifico (2022|2026|auto)
+# Specific toolset (2022|2026|auto)
 python build_plugin.py --toolset 2022
 
-# Stampa versione ed esce
+# Print version and exit
 python build_plugin.py --version
 ```
 
-## Struttura Repository
+## Repository Structure
 
 ```
 ns7zip/
-├── build_plugin.py              # Script di build unificato (tutte le versioni)
-├── rebuild_nsis7z1900-src.ps1   # Ricostruisce sorgenti 19.00
-├── 7zip-19.00/                  # 7-Zip 19.00 modificato
-├── 7zip-25.01/                  # 7-Zip 25.01 modificato (ZIP + NSIS handler)
-└── 7zip-26.00/                  # 7-Zip 26.00 modificato (ZIP + NSIS handler)
+├── build_plugin.py              # Unified build script (all versions)
+├── rebuild_nsis7z1900-src.ps1   # Rebuilds 19.00 sources
+├── 7zip-19.00/                  # 7-Zip 19.00 modified
+├── 7zip-25.01/                  # 7-Zip 25.01 modified (ZIP + NSIS handler)
+└── 7zip-26.00/                  # 7-Zip 26.00 modified (ZIP + NSIS handler)
 ```
 
-## Modifiche rispetto all'originale
+## Changes from Original
 
 ### NSIS Archive Handler (25.01, 26.00)
-Aggiunto supporto per estrarre archivi `.exe` creati con NSIS (non presente nel plugin originale):
+Added support for extracting `.exe` archives created with NSIS (not present in the original plugin):
 - `Archive\Nsis\NsisHandler.cpp/h`
 - `Archive\Nsis\NsisIn.cpp/h`
 - `Archive\Nsis\NsisDecode.cpp/h`
 - `Archive\Nsis\NsisRegister.cpp`
-- `Compress\BZip2Decoder.cpp/h` (richiesto da NsisDecode)
+- `Compress\BZip2Decoder.cpp/h` (required by NsisDecode)
 - `Compress\BZip2Crc.cpp`
 
-### Bug Fix (25.01, 26.00)
-- **Divide-by-zero**: aggiunto guard `if (totalSize == 0) return 0` in `GetPercentComplete`
-- **ExtractWithFileCallback**: callback NSIS triggerata solo al cambio filename (evita crash con `totalSize = UINT64_MAX` alla prima chiamata `SetTotal`)
+### Bug Fixes (25.01, 26.00)
+- **Divide-by-zero**: added guard `if (totalSize == 0) return 0` in `GetPercentComplete`
+- **ExtractWithFileCallback**: NSIS callback triggered only on filename change (avoids crash with `totalSize = UINT64_MAX` on first `SetTotal` call)
 
 ## License
 
 - **7-Zip**: LGPL 2.1 + BSD 3-clause
-- **Plugin NSIS**: Afrow UK
+- **NSIS Plugin**: Afrow UK
 
 ## Credits
 
 - Igor Pavlov (7-Zip)
-- Afrow UK (Plugin originale)
-- Simone (Supporto x64, VS2022/VS2026, ZIP, NSIS handler, ExtractWithFileCallback)
+- Afrow UK (Original plugin)
+- Simone (x64 support, VS2022/VS2026, ZIP, NSIS handler, ExtractWithFileCallback)
+
+---
+
+*See [README_IT.md](README_IT.md) for the Italian version.*
