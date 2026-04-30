@@ -7,6 +7,19 @@ e il progetto aderisce al [Semantic Versioning](https://semver.org/spec/v2.0.0.h
 
 ## [Unreleased]
 
+## [2.1.0] — 2026-04-30
+
+### Added
+- NSIS plugin API (`pluginapi.cpp`/`pluginapi.h`) for 7-Zip zstd build
+- `ExtractCallbackConsole` class for extraction progress and user input
+- Main extraction logic (`Main.cpp`, `MainAr.cpp`) for the zstd bundle
+- User input utilities (`UserInputUtils2`) for password handling and prompts
+- Break signal handling (`NSISBreak`) for graceful interruption
+- `Nsis7z_vs2026.vcxproj` (v145 toolset) for Visual Studio 2026 builds
+- `tools/fix_vcxproj.py` helper for project file patching
+- `versions/7-zip-zstd` submodule added
+- `build_zstd.cmd` top-level build script for the zstd variant
+
 ## [2.0.1] — 2026-04-29
 
 ### Fixed
@@ -23,6 +36,7 @@ e il progetto aderisce al [Semantic Versioning](https://semver.org/spec/v2.0.0.h
 - CI/CD via GitHub Actions (mirror automatico Gitea → GitHub)
 - Documentazione completa (README, CONTRIBUTING, SECURITY)
 
-[Unreleased]: https://gitea.emulab.it/Simone/nsis-plugin-ns7zip/compare/v2.0.1...HEAD
+[Unreleased]: https://gitea.emulab.it/Simone/nsis-plugin-ns7zip/compare/v2.1.0...HEAD
+[2.1.0]: https://gitea.emulab.it/Simone/nsis-plugin-ns7zip/compare/v2.0.1...v2.1.0
 [2.0.1]: https://gitea.emulab.it/Simone/nsis-plugin-ns7zip/compare/v2.0.0...v2.0.1
 [2.0.0]: https://gitea.emulab.it/Simone/nsis-plugin-ns7zip/releases/tag/v2.0.0
