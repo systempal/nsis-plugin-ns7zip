@@ -23,14 +23,17 @@ SCRIPTS = {
                "2026": "tools/legacy/build_plugin_2501_vs2026.py"},
     "26.00": {"2022": None,
                "2026": "tools/legacy/build_plugin_2600_vs2026.py"},
+    "zstd":  {"2022": None,
+               "2026": "tools/legacy/build_plugin_zstd_vs2026.py"},
 }
 
 
 def main() -> int:
     parser = argparse.ArgumentParser(description="Build nsis7z NSIS plugin")
     parser.add_argument("--7zip-version", dest="zip_version",
-                        choices=["19.00", "25.01", "26.00"], default="26.00",
-                        help="7-Zip version to build (default: 26.00)")
+                        choices=["19.00", "25.01", "26.00", "zstd"], default="26.00",
+                        help="7-Zip version to build (default: 26.00); "
+                             "'zstd' uses mcmilk/7-Zip-zstd submodule")
     parser.add_argument("--toolset", choices=["2022", "2026", "auto"], default="auto",
                         help="Visual Studio toolset version (default: auto)")
     parser.add_argument("--version", action="store_true",
@@ -42,8 +45,9 @@ def main() -> int:
         return 0
 
     ver = (ROOT / "VERSION").read_text(encoding="utf-8-sig").strip()
+    zip_label = "7z-ZS" if known.zip_version == "zstd" else f"7z {known.zip_version}"
     print(f"{Colors.BOLD}{Colors.BRIGHT_CYAN}=== Building ns7zip v{ver} "
-          f"(7z {known.zip_version}) ==={Colors.RESET}")
+          f"({zip_label}) ==={Colors.RESET}")
 
     toolset = known.toolset
     if toolset == "auto":
