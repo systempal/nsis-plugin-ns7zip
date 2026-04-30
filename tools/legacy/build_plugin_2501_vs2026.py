@@ -21,6 +21,69 @@ from typing import List, Tuple, Optional
 import xml.etree.ElementTree as ET
 
 
+# ---------------------------------------------------------------------------
+# Colors & Spinner
+# ---------------------------------------------------------------------------
+
+class Colors:
+    CYAN          = "\033[36m"
+    GREEN         = "\033[32m"
+    YELLOW        = "\033[33m"
+    RED           = "\033[31m"
+    GRAY          = "\033[90m"
+    BLUE          = "\033[34m"
+    RESET         = "\033[0m"
+    BOLD          = "\033[1m"
+    BRIGHT_GREEN  = "\033[92m"
+    BRIGHT_CYAN   = "\033[96m"
+    BRIGHT_WHITE  = "\033[97m"
+    BRIGHT_YELLOW = "\033[93m"
+    BRIGHT_RED    = "\033[91m"
+
+
+class Spinner:
+    def __init__(self, message: str = "Building...", delay: float = 0.1, total: int = 0):
+        self.spinner    = ['\u280b', '\u2819', '\u2839', '\u2838', '\u283c', '\u2834', '\u2826', '\u2827', '\u2807', '\u280f']
+        self.delay      = delay
+        self.message    = message
+        self.running    = False
+        self.thread     = None
+        self.start_time = time.time()
+
+    def update(self, current=None):
+        pass
+
+    def _spin(self):
+        idx    = 0
+        _block = '\u28ff'
+        while self.running:
+            elapsed     = time.time() - self.start_time
+            n_blocks    = int(elapsed // 2)
+            time_blocks = f"{Colors.YELLOW}{_block * n_blocks}{Colors.RESET}"
+            spin_char   = f"{Colors.YELLOW}{self.spinner[idx % len(self.spinner)]}{Colors.RESET}"
+            msg         = f"{Colors.BOLD}{Colors.CYAN}{self.message}{Colors.RESET}"
+            time_str    = f"{Colors.GREEN}{int(elapsed)}s{Colors.RESET}"
+            sys.stdout.write(f"\r{msg} {time_str} {time_blocks}{spin_char} ")
+            sys.stdout.flush()
+            idx += 1
+            time.sleep(self.delay)
+        sys.stdout.write("\r" + " " * (len(self.message) + 80) + "\r")
+        sys.stdout.flush()
+
+    def __enter__(self):
+        if sys.stdout.isatty():
+            self.running = True
+            self.thread  = threading.Thread(target=self._spin, daemon=True)
+            self.thread.start()
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        if self.running:
+            self.running = False
+            if self.thread:
+                self.thread.join()
+
+
 class BuildConfig:
     """Configuration for a single build target"""
     def __init__(self, name: str, config: str, platform: str, dest_dir: str):
@@ -222,41 +285,41 @@ def get_memory_optimizations() -> List[str]:
 def print_cpu_info(use_parallel: bool, use_optimizations: bool = True) -> None:
     """Print CPU information for build optimization"""
     if not use_parallel:
-        print("Build mode:         Single-threaded")
+        print(f"{Colors.CYAN}Build mode:{Colors.RESET}         {Colors.BRIGHT_WHITE}Single-threaded{Colors.RESET}")
         if use_optimizations:
-            print("Optimizations:      ENABLED (memory, caching)")
+            print(f"{Colors.CYAN}Optimizations:{Colors.RESET}      {Colors.BRIGHT_WHITE}ENABLED{Colors.RESET} (memory, caching)")
         return
-    
+
     cpu_info = get_cpu_info()
     optimal_threads = get_optimal_thread_count()
-    
-    print("Build mode:         Parallel")
-    print(f"Logical cores:      {cpu_info['logical_cores']}")
-    print(f"Physical cores:     {cpu_info['physical_cores']}")
-    
+
+    print(f"{Colors.CYAN}Build mode:{Colors.RESET}         {Colors.BRIGHT_WHITE}Parallel{Colors.RESET}")
+    print(f"{Colors.CYAN}Logical cores:{Colors.RESET}      {Colors.BRIGHT_WHITE}{cpu_info['logical_cores']}{Colors.RESET}")
+    print(f"{Colors.CYAN}Physical cores:{Colors.RESET}     {Colors.BRIGHT_WHITE}{cpu_info['physical_cores']}{Colors.RESET}")
+
     if cpu_info['has_hyperthreading']:
-        print("Hyperthreading:     ENABLED")
-        print(f"Optimal threads:    {optimal_threads} (using physical cores)")
+        print(f"{Colors.CYAN}Hyperthreading:{Colors.RESET}     {Colors.BRIGHT_GREEN}ENABLED{Colors.RESET}")
+        print(f"{Colors.CYAN}Optimal threads:{Colors.RESET}    {Colors.BRIGHT_WHITE}{optimal_threads}{Colors.RESET} (using physical cores)")
     else:
-        print("Hyperthreading:     NOT AVAILABLE")
-        print(f"Optimal threads:    {optimal_threads}")
-    
-    print(f"MSBuild threads:    {optimal_threads}")
-    
+        print(f"{Colors.CYAN}Hyperthreading:{Colors.RESET}     {Colors.GRAY}NOT AVAILABLE{Colors.RESET}")
+        print(f"{Colors.CYAN}Optimal threads:{Colors.RESET}    {Colors.BRIGHT_WHITE}{optimal_threads}{Colors.RESET}")
+
+    print(f"{Colors.CYAN}MSBuild threads:{Colors.RESET}    {Colors.BRIGHT_WHITE}{optimal_threads}{Colors.RESET}")
+
     if use_optimizations:
-        print("Optimizations:      ENABLED (parallel, memory, caching)")
+        print(f"{Colors.CYAN}Optimizations:{Colors.RESET}      {Colors.BRIGHT_GREEN}ENABLED{Colors.RESET} (parallel, memory, caching)")
         try:
             import psutil
             memory_gb = psutil.virtual_memory().total / (1024**3)
-            print(f"Available memory:   {memory_gb:.1f} GB")
+            print(f"{Colors.CYAN}Available memory:{Colors.RESET}   {Colors.BRIGHT_WHITE}{memory_gb:.1f} GB{Colors.RESET}")
         except ImportError:
-            print("Available memory:   Unknown (install psutil for details)")
+            print(f"{Colors.CYAN}Available memory:{Colors.RESET}   {Colors.GRAY}Unknown (install psutil for details){Colors.RESET}")
     else:
-        print("Optimizations:      DISABLED")
-    
+        print(f"{Colors.CYAN}Optimizations:{Colors.RESET}      {Colors.RED}DISABLED{Colors.RESET}")
+
     if not cpu_info['has_psutil']:
-        print("Note: Install 'psutil' for detailed CPU/memory info (pip install psutil)")
-    
+        print(f"{Colors.GRAY}Note: Install 'psutil' for detailed CPU/memory info (pip install psutil){Colors.RESET}")
+
     print()
 
 
@@ -310,12 +373,12 @@ def build_configuration(
             cmd.append(f'/p:MSBuildCacheEnabled=true')
     
     if not capture_output:
-        print(f"\n{'='*50}")
+        print(f"\n{Colors.BOLD}{Colors.BRIGHT_YELLOW}{'='*50}{Colors.RESET}")
         if counter:
-            print(f"Building {config.name} [{counter}]")
+            print(f"{Colors.BOLD}{Colors.BRIGHT_WHITE}Building {config.name} [{counter}]{Colors.RESET}")
         else:
-            print(f"Building {config.name}...")
-        print('='*50)
+            print(f"{Colors.BOLD}{Colors.BRIGHT_WHITE}Building {config.name}...{Colors.RESET}")
+        print(f"{Colors.BOLD}{Colors.BRIGHT_YELLOW}{'='*50}{Colors.RESET}")
     
     # Execute build and measure time
     start_time = time.time()
@@ -353,7 +416,7 @@ def copy_output(
     dest_dir = plugins_dir / config.dest_dir
     
     if not output_file.exists():
-        print(f"ERROR: {config.name} DLL not found at {output_file}")
+        print(f"{Colors.RED}ERROR:{Colors.RESET} {config.name} DLL not found at {output_file}")
         return False, 0, None
     
     # Create destination directory
@@ -364,16 +427,16 @@ def copy_output(
         dest_path = dest_dir / 'nsis7z.dll'
         shutil.copy2(output_file, dest_path)
         file_size = output_file.stat().st_size
-        print(f"SUCCESS: {config.name} - {file_size:,} bytes - Copied to {dest_dir}")
+        print(f"{Colors.BRIGHT_GREEN}SUCCESS:{Colors.RESET} {config.name} - {file_size:,} bytes - Copied to {dest_dir}")
         return True, file_size, dest_path
     except Exception as e:
-        print(f"ERROR: Failed to copy {config.name}: {e}")
+        print(f"{Colors.RED}ERROR:{Colors.RESET} Failed to copy {config.name}: {e}")
         return False, 0, None
 
 
 def clean_build_artifacts(project_dir: Path, configs: List[BuildConfig]) -> None:
     """Clean up build artifacts"""
-    print("\nCleaning build artifacts...")
+    print(f"\n{Colors.CYAN}Cleaning build artifacts...{Colors.RESET}")
     
     build_base_dir = project_dir / 'CPP' / '7zip' / 'Bundles' / 'Nsis7z' / 'Build'
     
@@ -387,11 +450,11 @@ def clean_build_artifacts(project_dir: Path, configs: List[BuildConfig]) -> None
         if dir_path.exists():
             try:
                 shutil.rmtree(dir_path)
-                print(f"  - Cleaned: {dir_path.name}")
+                print(f"  {Colors.GRAY}- Cleaned: {dir_path.name}{Colors.RESET}")
             except Exception as e:
-                print(f"  - Failed to clean {dir_path.name}: {e}")
+                print(f"  {Colors.RED}- Failed to clean {dir_path.name}: {e}{Colors.RESET}")
     
-    print("Build artifacts cleaned successfully.")
+    print(f"{Colors.BRIGHT_GREEN}Build artifacts cleaned successfully.{Colors.RESET}")
 
 
 def format_time(seconds: float) -> str:
@@ -526,8 +589,8 @@ def _build_configs_parallel(
     in the same order as *configs*.
     """
     n = len(configs)
-    print(f"\nParallel-configs: launching {n} builds simultaneously...")
-    print("=" * 50)
+    print(f"\n{Colors.BOLD}{Colors.BRIGHT_CYAN}Parallel-configs:{Colors.RESET} launching {Colors.BRIGHT_WHITE}{n}{Colors.RESET} builds simultaneously...")
+    print(f"{Colors.BOLD}{Colors.BRIGHT_CYAN}{'='*50}{Colors.RESET}")
 
     total_start = time.time()
     results_by_idx: dict = {}
@@ -551,35 +614,39 @@ def _build_configs_parallel(
 
         with _print_lock:
             all_ok = success and copy_ok
+            tag_color = Colors.BRIGHT_GREEN if all_ok else Colors.RED
             tag = "OK" if all_ok else "FAILED"
             size_str = f"{file_size:,} bytes" if file_size > 0 else "N/A"
-            print(f"[{tag}] {config.name}  ({format_time(build_time)})  {size_str}")
+            sys.stdout.write("\r" + " " * 80 + "\r")
+            sys.stdout.flush()
+            print(f"{tag_color}[{tag}]{Colors.RESET} {config.name}  ({format_time(build_time)})  {size_str}")
             if dest_path:
-                print(f"        -> {dest_path}")
+                print(f"        {Colors.GRAY}-> {dest_path}{Colors.RESET}")
             if not all_ok:
                 copy_out = copy_buf.getvalue()
                 if copy_out.strip():
                     print(copy_out.rstrip())
                 if captured.strip():
-                    print("--- Build output ---")
+                    print(f"{Colors.YELLOW}--- Build output ---{Colors.RESET}")
                     print(captured.rstrip())
 
         with idx_lock:
             results_by_idx[idx] = (config, success and copy_ok, build_time, file_size, dest_path)
 
-    with ThreadPoolExecutor(max_workers=n) as executor:
-        futures = {executor.submit(_build_one, i, cfg): i for i, cfg in enumerate(configs)}
-        for fut in as_completed(futures):
-            exc = fut.exception()
-            if exc:
-                idx = futures[fut]
-                with _print_lock:
-                    print(f"ERROR: worker for config index {idx} raised: {exc}")
-                with idx_lock:
-                    results_by_idx[idx] = (configs[idx], False, 0.0, 0, None)
+    with Spinner(f"Building {n} configs in parallel...") as _spinner:
+        with ThreadPoolExecutor(max_workers=n) as executor:
+            futures = {executor.submit(_build_one, i, cfg): i for i, cfg in enumerate(configs)}
+            for fut in as_completed(futures):
+                exc = fut.exception()
+                if exc:
+                    idx = futures[fut]
+                    with _print_lock:
+                        print(f"{Colors.RED}ERROR:{Colors.RESET} worker for config index {idx} raised: {exc}")
+                    with idx_lock:
+                        results_by_idx[idx] = (configs[idx], False, 0.0, 0, None)
 
     wall_time = time.time() - total_start
-    print(f"\nAll {n} configs finished in {format_time(wall_time)} (wall clock)")
+    print(f"\n{Colors.BOLD}{Colors.BRIGHT_CYAN}All {n} configs finished in {Colors.BRIGHT_WHITE}{format_time(wall_time)}{Colors.CYAN} (wall clock){Colors.RESET}")
     return [results_by_idx[i] for i in range(n)]
 
 def main():
@@ -749,15 +816,15 @@ Examples:
         configs_to_build = [CONFIGS[name] for name in args.configs]
     
     # Print header
-    print("=" * 60)
-    print(f"Building nsis7z plugin (7-Zip 25.01, VS2026) - {len(configs_to_build)} configuration(s)")
-    print("=" * 60)
-    print(f"Visual Studio: {vs_version_name} (toolset {platform_toolset})")
-    print(f"MSBuild:   {msbuild_path}")
-    print(f"Project:   {project_file}")
-    print(f"Plugins:   {plugins_dir}")
-    print(f"Rebuild:   {args.rebuild}")
-    print(f"Verbosity: {args.verbosity}")
+    print(f"{Colors.BOLD}{Colors.BRIGHT_CYAN}{"="*60}{Colors.RESET}")
+    print(f"{Colors.BOLD}{Colors.BRIGHT_CYAN}Building nsis7z plugin (7-Zip 25.01, VS2026){Colors.RESET} - {Colors.BRIGHT_WHITE}{len(configs_to_build)}{Colors.RESET} configuration(s)")
+    print(f"{Colors.BOLD}{Colors.BRIGHT_CYAN}{"="*60}{Colors.RESET}")
+    print(f"{Colors.CYAN}Visual Studio:{Colors.RESET}  {Colors.BRIGHT_WHITE}{vs_version_name} (toolset {platform_toolset}){Colors.RESET}")
+    print(f"{Colors.CYAN}MSBuild:{Colors.RESET}        {Colors.BRIGHT_WHITE}{msbuild_path}{Colors.RESET}")
+    print(f"{Colors.CYAN}Project:{Colors.RESET}        {Colors.BRIGHT_WHITE}{project_file}{Colors.RESET}")
+    print(f"{Colors.CYAN}Plugins:{Colors.RESET}        {Colors.BRIGHT_WHITE}{plugins_dir}{Colors.RESET}")
+    print(f"{Colors.CYAN}Rebuild:{Colors.RESET}        {Colors.BRIGHT_WHITE}{args.rebuild}{Colors.RESET}")
+    print(f"{Colors.CYAN}Verbosity:{Colors.RESET}      {Colors.BRIGHT_WHITE}{args.verbosity}{Colors.RESET}")
     print()
     
     # Print CPU and parallel build info
@@ -851,12 +918,13 @@ Examples:
     total_time = time.time() - total_start_time
     
     # Summary
-    print("\n" + "=" * 50)
+    print()
     all_success = all(success for _, success, _, _, _ in build_results)
     
     if all_success:
-        print("ALL BUILDS SUCCESSFUL!")
-        print("=" * 50)
+        print(f"{Colors.BOLD}{Colors.BRIGHT_GREEN}{"="*50}{Colors.RESET}")
+        print(f"{Colors.BOLD}{Colors.BRIGHT_GREEN}ALL BUILDS SUCCESSFUL!{Colors.RESET}")
+        print(f"{Colors.BOLD}{Colors.BRIGHT_GREEN}{"="*50}{Colors.RESET}")
         print("\nPlugins copied to:")
         for config, _, build_time, file_size, dest_path in build_results:
             dest = dest_path if dest_path else plugins_dir / config.dest_dir / 'nsis7z.dll'
@@ -867,22 +935,24 @@ Examples:
             print()
             clean_build_artifacts(project_dir, configs_to_build)
     else:
-        print("SOME BUILDS FAILED!")
-        print("=" * 50)
+        print(f"{Colors.BOLD}{Colors.RED}{"="*50}{Colors.RESET}")
+        print(f"{Colors.BOLD}{Colors.RED}SOME BUILDS FAILED!{Colors.RESET}")
+        print(f"{Colors.BOLD}{Colors.RED}{"="*50}{Colors.RESET}")
         print("\nFailed configurations:")
         for config, success, build_time, file_size, dest_path in build_results:
             if not success:
                 print(f"  - {config.name}")
     
     # Show timing summary
-    print("\n" + "-" * 50)
-    print("Build Summary:")
+    print(f"\n{Colors.BOLD}{Colors.BRIGHT_CYAN}{"-"*50}{Colors.RESET}")
+    print(f"{Colors.BOLD}{Colors.BRIGHT_CYAN}Build Summary:{Colors.RESET}")
     for config, success, build_time, file_size, dest_path in build_results:
         status = "OK" if success else "FAIL"
+        row_color = Colors.BRIGHT_GREEN if success else Colors.RED
         size_str = f"{file_size:,} bytes" if file_size > 0 else "N/A"
-        print(f"  {status} {config.name:15s} - {format_time(build_time):8s} - {size_str}")
-    print("-" * 50)
-    print(f"Total time: {format_time(total_time)}")
+        print(f"  {row_color}{status}{Colors.RESET} {config.name:15s} - {format_time(build_time):8s} - {size_str}")
+    print(f"{Colors.BOLD}{Colors.BRIGHT_CYAN}{"-"*50}{Colors.RESET}")
+    print(f"Total time: {Colors.BRIGHT_WHITE}{format_time(total_time)}{Colors.RESET}")
     print()
     
     # Pause if requested
