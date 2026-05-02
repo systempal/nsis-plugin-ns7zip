@@ -157,7 +157,6 @@ jobs:
           GITEA_TOKEN: ${{ secrets.GITEA_TOKEN }}
         run: |
           python3 - <<'PY'
-          import sys
           import json
           import os
           import urllib.error
@@ -166,19 +165,22 @@ jobs:
           base = "https://gitea.emulab.it/api/v1"
           repo = "Simone/nsis-plugin-ns7zip"
           tag = "${{ github.ref_name }}"
-          token = os.environ["GITEA_TOKEN"]
+            token = os.environ.get("GITEA_TOKEN", "").strip()
+
+            if not token:
+              raise SystemExit("GITEA_TOKEN is missing or empty")
 
           with open("release_body.md", "r", encoding="utf-8") as f:
             body = f.read()
 
-          def request(method, path, payload=None):
+          def request(method, path, payload=None, auth_scheme="token"):
             data = json.dumps(payload).encode("utf-8") if payload is not None else None
             req = urllib.request.Request(
               f"{base}{path}",
               data=data,
               method=method,
               headers={
-                "Authorization": f"token {token}",
+                    "Authorization": f"{auth_scheme} {token}",
                 "Content-Type": "application/json",
                 "Accept": "application/json",
               },
@@ -186,32 +188,52 @@ jobs:
             with urllib.request.urlopen(req) as resp:
               return json.loads(resp.read().decode("utf-8"))
 
+          auth_scheme = None
+          last_error = None
+          for scheme in ("token", "Bearer"):
+              try:
+                  user = request("GET", "/user", auth_scheme=scheme)
+                  auth_scheme = scheme
+                  print(f"Gitea auth OK via '{scheme}' as user: {user.get('login', '<unknown>')}")
+                  break
+              except urllib.error.HTTPError as e:
+                  try:
+                      details = e.read().decode("utf-8", errors="replace")
+                  except Exception:
+                      details = ""
+                  last_error = f"HTTP {e.code} {e.reason} ({scheme}) {details}".strip()
+
+          if not auth_scheme:
+              raise SystemExit(
+                  "Gitea authentication failed for both 'token' and 'Bearer'. "
+                  "Check secret GITEA_TOKEN value and permissions (Repository Read+Write). "
+                  f"Last error: {last_error}"
+              )
+
           try:
-            try:
-              release = request("GET", f"/repos/{repo}/releases/tags/{tag}")
+              release = request("GET", f"/repos/{repo}/releases/tags/{tag}", auth_scheme=auth_scheme)
               rid = release["id"]
-              request("PATCH", f"/repos/{repo}/releases/{rid}", {"body": body})
+              request("PATCH", f"/repos/{repo}/releases/{rid}", {"body": body}, auth_scheme=auth_scheme)
               print(f"Updated existing Gitea release id={rid} for tag {tag}")
-            except urllib.error.HTTPError as e:
-              if e.code == 404:
-                created = request(
+          except urllib.error.HTTPError as e:
+              if e.code != 404:
+                  try:
+                      details = e.read().decode("utf-8", errors="replace")
+                  except Exception:
+                      details = ""
+                  raise SystemExit(f"Gitea release lookup/update failed: HTTP {e.code} {e.reason}. {details}".strip())
+
+              created = request(
                   "POST",
                   f"/repos/{repo}/releases",
                   {
-                    "tag_name": tag,
-                    "name": tag,
-                    "body": body,
-                    "draft": False,
-                    "prerelease": False,
+                      "tag_name": tag,
+                      "name": tag,
+                      "body": body,
+                      "draft": False,
+                      "prerelease": False,
                   },
-                )
-                print(f"Created Gitea release id={created['id']} for tag {tag}")
-              elif e.code in (401, 403):
-                print("::warning::Gitea release sync skipped: token unauthorized/forbidden. Check GITEA_TOKEN permissions (Repository Read+Write).")
-                sys.exit(0)
-              else:
-                raise
-          except urllib.error.HTTPError as e:
-            print(f"::warning::Gitea release sync skipped due to HTTP {e.code}: {e.reason}")
-            sys.exit(0)
+                  auth_scheme=auth_scheme,
+              )
+              print(f"Created Gitea release id={created['id']} for tag {tag}")
           PY
