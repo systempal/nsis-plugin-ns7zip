@@ -15,15 +15,16 @@ on:
         required: true
       gitea_only:
         description: 'Esegui solo sync release body su Gitea (salta build e GitHub release)'
+        type: boolean
         required: false
-        default: 'false'
+        default: false
 
 permissions:
   contents: write
 
 jobs:
   build:
-    if: ${{ !(github.event_name == 'workflow_dispatch' && inputs.gitea_only == 'true') }}
+    if: ${{ !(github.event_name == 'workflow_dispatch' && inputs.gitea_only) }}
     runs-on: windows-latest
     strategy:
       fail-fast: true
@@ -74,7 +75,7 @@ jobs:
           path: '*.zip'
 
   build-linux:
-    if: ${{ !(github.event_name == 'workflow_dispatch' && inputs.gitea_only == 'true') }}
+    if: ${{ !(github.event_name == 'workflow_dispatch' && inputs.gitea_only) }}
     runs-on: ubuntu-latest
     strategy:
       fail-fast: true
@@ -120,7 +121,7 @@ jobs:
           if-no-files-found: error
 
   publish:
-    if: ${{ !(github.event_name == 'workflow_dispatch' && inputs.gitea_only == 'true') }}
+    if: ${{ !(github.event_name == 'workflow_dispatch' && inputs.gitea_only) }}
     needs: [build, build-linux]
     runs-on: ubuntu-latest
     steps:
@@ -255,7 +256,7 @@ jobs:
           PY
 
           sync-gitea-only:
-          if: ${{ github.event_name == 'workflow_dispatch' && inputs.gitea_only == 'true' }}
+            if: ${{ github.event_name == 'workflow_dispatch' && inputs.gitea_only }}
           runs-on: ubuntu-latest
           steps:
             - uses: actions/checkout@v6
