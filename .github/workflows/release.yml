@@ -50,51 +50,21 @@ jobs:
       - name: Build ${{ matrix.config }}
         run: python build_plugin.py --configs ${{ matrix.config }} --verbosity normal
 
-      - name: Read VERSION
-        id: version
-        shell: pwsh
-        run: |
-          $tag = "${{ github.ref_name }}"
-          if ([string]::IsNullOrEmpty($tag) -or $tag -eq "main") { $tag = "${{ inputs.tag }}" }
-          $v = $tag -replace '^v',''
-          $map = @{ 'x86-ansi' = 'x86-ansi'; 'x86-unicode' = 'x86-unicode'; 'x64-unicode' = 'amd64-unicode' }
-          $dir = $map['${{ matrix.config }}']
-          echo "version=$v" >> $env:GITHUB_OUTPUT
-          echo "tag=$tag"   >> $env:GITHUB_OUTPUT
-          echo "dir=$dir"   >> $env:GITHUB_OUTPUT
-
-      - name: Package
-        shell: pwsh
-        run: |
-          $name = "${{ github.event.repository.name }}-${{ steps.version.outputs.version }}-${{ steps.version.outputs.dir }}"
-          $stage = "stage/$name"
-          New-Item -ItemType Directory -Force -Path $stage | Out-Null
-          Copy-Item "dist/${{ steps.version.outputs.dir }}/*" $stage -Recurse
-          Copy-Item README.md, LICENSE, VERSION, CHANGELOG.md $stage
-          if (Test-Path "include")  { Copy-Item "include"  $stage -Recurse }
-          if (Test-Path "examples") { Copy-Item "examples" $stage -Recurse }
-          Compress-Archive -Path "$stage/*" -DestinationPath "$name.zip" -Force
-
       - name: Collect DLL
         shell: pwsh
         run: |
           $map = @{ 'x86-ansi' = 'x86-ansi'; 'x86-unicode' = 'x86-unicode'; 'x64-unicode' = 'amd64-unicode' }
-          $src = "plugins\$($map['${{ matrix.config }}'])\nsis7z.dll"
-          $dst = "dist\${{ matrix.config }}"
+          $dir = $map['${{ matrix.config }}']
+          $src = "plugins\$dir\nsis7z.dll"
+          $dst = "dll-bundle\$dir"
           New-Item -ItemType Directory -Force -Path $dst | Out-Null
           Copy-Item $src $dst
-
-      - name: Upload zip
-        uses: actions/upload-artifact@v7
-        with:
-          name: pkg-${{ matrix.config }}
-          path: '*.zip'
 
       - name: Upload DLL
         uses: actions/upload-artifact@v7
         with:
           name: dll-win-${{ matrix.config }}
-          path: dist/**/*.dll
+          path: dll-bundle/**
           if-no-files-found: error
 
   build-linux:
@@ -127,30 +97,7 @@ jobs:
       - name: Build ${{ matrix.config }} on Linux
         run: python build_plugin.py --host linux --configs ${{ matrix.config }} --verbose
 
-      - name: Collect DLL
-        run: |
-          case "${{ matrix.config }}" in
-            x86-ansi) dir="x86-ansi" ;;
-            x86-unicode) dir="x86-unicode" ;;
-            x64-unicode) dir="amd64-unicode" ;;
-          esac
-          dst="dist/${{ matrix.config }}"
-          mkdir -p "$dst"
-          cp "plugins/$dir/nsis7z.dll" "$dst/"
 
-      - name: Upload artifact
-        uses: actions/upload-artifact@v7
-        with:
-          name: linux-build-${{ matrix.config }}
-          path: dist/**
-          if-no-files-found: error
-
-      - name: Upload DLL
-        uses: actions/upload-artifact@v7
-        with:
-          name: dll-linux-${{ matrix.config }}
-          path: dist/**/*.dll
-          if-no-files-found: error
 
   publish:
     needs: [build, build-linux]
@@ -177,10 +124,11 @@ jobs:
           esac
           echo "tag=$tag" >> "$GITHUB_OUTPUT"
 
-      - name: Download artifacts
+      - name: Download DLL artifacts
         uses: actions/download-artifact@v8
         with:
-          path: artifacts
+          path: dll-bundle
+          pattern: dll-win-*
           merge-multiple: true
 
       - name: Extract changelog section
@@ -197,10 +145,18 @@ jobs:
           echo "---" >> release_body.md
           echo "_Repository primario: vedi link Gitea nel README. Il mirror GitHub è generato automaticamente._" >> release_body.md
 
+      - name: Package plugins ZIP
+        id: pkg
+        run: |
+          tag="${{ steps.tag.outputs.tag }}"
+          version="${tag#v}"
+          zip_name="${{ github.event.repository.name }}-${version}-plugins.zip"
+          (cd dll-bundle && zip -r "../$zip_name" .)
+          echo "zip_name=$zip_name" >> "$GITHUB_OUTPUT"
+
       - name: SHA256SUMS
         run: |
-          cd artifacts
-          sha256sum *.zip > SHA256SUMS.txt
+          sha256sum "${{ steps.pkg.outputs.zip_name }}" > SHA256SUMS.txt
           cat SHA256SUMS.txt
 
       - name: Create GitHub Release
@@ -209,9 +165,8 @@ jobs:
           tag_name: ${{ steps.tag.outputs.tag }}
           name: ${{ steps.tag.outputs.tag }}
           files: |
-            artifacts/*.zip
-            artifacts/**/*.dll
-            artifacts/SHA256SUMS.txt
+            ${{ steps.pkg.outputs.zip_name }}
+            SHA256SUMS.txt
           body_path: release_body.md
 
       - name: Update Gitea Release body
