@@ -75,13 +75,31 @@ Linux notes:
 ## Repository Structure
 
 ```
-ns7zip/
+nsis-plugin-ns7zip/
 ├── build_plugin.py              # Unified build script (all versions)
+├── build_zstd.cmd               # Build script for 7-zip-zstd variant
 ├── rebuild_nsis7z1900-src.ps1   # Rebuilds 19.00 sources
-├── 7zip-19.00/                  # 7-Zip 19.00 modified
-├── 7zip-25.01/                  # 7-Zip 25.01 modified (ZIP + NSIS handler)
-└── 7zip-26.00/                  # 7-Zip 26.00 modified (ZIP + NSIS handler)
+├── versions/
+│   ├── 19.00/                   # 7-Zip 19.00 modified
+│   ├── 25.01/                   # 7-Zip 25.01 modified (ZIP + NSIS handler)
+│   ├── 26.00/                   # 7-Zip 26.00 modified (ZIP + NSIS handler)
+│   └── 7-zip-zstd/              # 7-Zip zstd fork (submodule)
+├── plugins/                     # Compiled DLLs output
+├── tools/
+│   ├── fix_vcxproj.py           # Project file patcher
+│   ├── update_gitea_releases.py # Backfill Gitea release bodies (one-shot)
+│   ├── release-notes/           # Per-version Markdown snippets
+│   ├── linux/                   # Linux-specific build helpers
+│   └── legacy/                  # Old per-version build scripts
+└── .github/workflows/
+    ├── build.yml                # CI: Windows + Linux matrix build
+    └── release.yml              # Release: build artifacts + publish to GitHub & Gitea
 ```
+
+## CI / Release Workflow
+
+- **build.yml** — runs on every push/PR; builds all three configs on Windows (MSBuild) and Linux (MinGW-w64) in parallel.
+- **release.yml** — triggered by a `v*` tag push; builds and packages artifacts, creates a GitHub Release with the relevant CHANGELOG section as body, and updates the corresponding Gitea release body via API (`GITEA_TOKEN` secret required).
 
 ## Changes from Original
 
