@@ -943,14 +943,14 @@ Examples:
                 print(f"  - {config.name}")
     
     # Show timing summary
-    print(f"\n{Colors.BOLD}{Colors.BRIGHT_CYAN}{"-"*50}{Colors.RESET}")
+    print(f"\n{Colors.BOLD}{Colors.BRIGHT_CYAN}{'-'*50}{Colors.RESET}")
     print(f"{Colors.BOLD}{Colors.BRIGHT_CYAN}Build Summary:{Colors.RESET}")
     for config, success, build_time, file_size, dest_path in build_results:
         status = "OK" if success else "FAIL"
         row_color = Colors.BRIGHT_GREEN if success else Colors.RED
         size_str = f"{file_size:,} bytes" if file_size > 0 else "N/A"
         print(f"  {row_color}{status}{Colors.RESET} {config.name:15s} - {format_time(build_time):8s} - {size_str}")
-    print(f"{Colors.BOLD}{Colors.BRIGHT_CYAN}{"-"*50}{Colors.RESET}")
+    print(f"{Colors.BOLD}{Colors.BRIGHT_CYAN}{'-'*50}{Colors.RESET}")
     print(f"Total time: {Colors.BRIGHT_WHITE}{format_time(total_time)}{Colors.RESET}")
     print()
     
