@@ -27,12 +27,14 @@ using namespace NDir;
 
 extern HWND g_hwndProgress;
 
+static const UInt64 k_SizeUnknown = (UInt64)(Int64)-1;
+
 void CExtractCallbackConsole::UpdateProgress()
 {
 	// Prima controlla se c'è il callback con filename (nuova funzione)
 	if (ProgressWithFileHandler != NULL)
 	{
-		if (completedSize != -1 || totalSize > 0)
+		if (completedSize != k_SizeUnknown || totalSize > 0)
 			ProgressWithFileHandler(completedSize, totalSize, CurrentFileName.Ptr());
 		else
 			ProgressWithFileHandler(0, 0, CurrentFileName.Ptr());
@@ -40,14 +42,14 @@ void CExtractCallbackConsole::UpdateProgress()
 	// Altrimenti usa il callback originale (per compatibilità)
 	else if (ProgressHandler != NULL)
 	{
-		if (completedSize != -1 || totalSize > 0)
+		if (completedSize != k_SizeUnknown || totalSize > 0)
 			ProgressHandler(completedSize, totalSize);
 		else
 			ProgressHandler(0, 0);
 	}
 }
 
-STDMETHODIMP CExtractCallbackConsole::SetTotal(UInt64 val)
+Z7_COM7F_IMF(CExtractCallbackConsole::SetTotal(UInt64 val))
 {
   totalSize = val;
   UpdateProgress();
@@ -56,7 +58,7 @@ STDMETHODIMP CExtractCallbackConsole::SetTotal(UInt64 val)
   return S_OK;
 }
 
-STDMETHODIMP CExtractCallbackConsole::SetCompleted(const UInt64 *val)
+Z7_COM7F_IMF(CExtractCallbackConsole::SetCompleted(const UInt64 *val))
 {
   completedSize = *val;
   UpdateProgress();
@@ -65,31 +67,35 @@ STDMETHODIMP CExtractCallbackConsole::SetCompleted(const UInt64 *val)
   return S_OK;
 }
 
-STDMETHODIMP CExtractCallbackConsole::AskOverwrite(
+Z7_COM7F_IMF(CExtractCallbackConsole::AskOverwrite(
     const wchar_t *existName, const FILETIME *, const UInt64 *,
     const wchar_t *newName, const FILETIME *, const UInt64 *,
-    Int32 *answer)
+    Int32 *answer))
 {
- *answer = NOverwriteAnswer::kYesToAll;
+  (void)existName; (void)newName;
+  *answer = NOverwriteAnswer::kYesToAll;
   return S_OK;
 }
 
-STDMETHODIMP CExtractCallbackConsole::PrepareOperation(const wchar_t *name, Int32 isFolder, Int32 askExtractMode, const UInt64 *position)
+Z7_COM7F_IMF(CExtractCallbackConsole::PrepareOperation(const wchar_t *name, Int32 isFolder, Int32 askExtractMode, const UInt64 *position))
 {
+  (void)isFolder; (void)askExtractMode; (void)position;
   // Memorizza il nome del file corrente per passarlo al callback
   CurrentFileName = name;
   return S_OK;
 }
 
-STDMETHODIMP CExtractCallbackConsole::MessageError(const wchar_t *message)
+Z7_COM7F_IMF(CExtractCallbackConsole::MessageError(const wchar_t *message))
 {
+  (void)message;
   NumFileErrorsInCurrentArchive++;
   NumFileErrors++;
   return S_OK;
 }
 
-STDMETHODIMP CExtractCallbackConsole::SetOperationResult(Int32 opRes, Int32 encrypted)
+Z7_COM7F_IMF(CExtractCallbackConsole::SetOperationResult(Int32 opRes, Int32 encrypted))
 {
+  (void)encrypted;
   switch(opRes)
   {
     case NArchive::NExtract::NOperationResult::kOK:
@@ -113,7 +119,7 @@ HRESULT CExtractCallbackConsole::SetPassword(const UString &password)
   return S_OK;
 }
 
-STDMETHODIMP CExtractCallbackConsole::CryptoGetTextPassword(BSTR *password)
+Z7_COM7F_IMF(CExtractCallbackConsole::CryptoGetTextPassword(BSTR *password))
 {
   if (!PasswordIsDefined)
   {
@@ -127,6 +133,7 @@ STDMETHODIMP CExtractCallbackConsole::CryptoGetTextPassword(BSTR *password)
 
 HRESULT CExtractCallbackConsole::BeforeOpen(const wchar_t *name, bool testMode)
 {
+  (void)name; (void)testMode;
   NumArchives++;
   NumFileErrorsInCurrentArchive = 0;
   return S_OK;
@@ -134,6 +141,7 @@ HRESULT CExtractCallbackConsole::BeforeOpen(const wchar_t *name, bool testMode)
 
 HRESULT CExtractCallbackConsole::OpenResult(const CCodecs *codecs, const CArchiveLink &arcLink, const wchar_t *name, HRESULT result)
 {
+  (void)codecs; (void)arcLink; (void)name;
   if (result != S_OK)
   {
     NumArchiveErrors++;

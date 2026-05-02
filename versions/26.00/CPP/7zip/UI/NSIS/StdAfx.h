@@ -3,7 +3,13 @@
 #ifndef __STDAFX_H
 #define __STDAFX_H
 
-#include <Windows.h>
-#include "7zip/Bundles/Nsis7z/pluginapi.h"
+#ifdef _WIN32
+  #if defined(__MINGW32__) || defined(__MINGW64__)
+    #include <windows.h>
+  #else
+    #include <Windows.h>
+  #endif
+#endif
+#include "../../Bundles/Nsis7z/pluginapi.h"
 
 #endif

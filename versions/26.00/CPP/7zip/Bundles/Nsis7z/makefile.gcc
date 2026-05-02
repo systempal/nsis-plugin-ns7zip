@@ -1,0 +1,97 @@
+PROG = nsis7z
+DEF_FILE = Nsis7z.def
+
+include ../Format7zF/Arc_gcc.mak
+
+ifdef IS_MINGW
+LOCAL_FLAGS_SYS = -DZ7_DEVICE_FILE
+SYS_OBJS = \
+  $O/DLL.o \
+  $O/DllSecur.o \
+  $O/resource.o \
+
+else
+SYS_OBJS = \
+  $O/MyWindows.o \
+
+endif
+
+LOCAL_FLAGS += \
+  $(LOCAL_FLAGS_SYS) \
+  $(LOCAL_FLAGS_EXTRA) \
+
+NSIS_UI_OBJS = \
+  $O/NsisMain.o \
+  $O/NsisMainAr.o \
+  $O/NsisBreak.o \
+  $O/NsisExtractCallbackConsole.o \
+  $O/NsisUserInputUtils2.o \
+  $O/ConsoleOpenCallbackConsole.o \
+  $O/ConsolePercentPrinter.o \
+  $O/ConsoleClose.o \
+  $O/ConsoleUserInputUtils.o \
+  $O/Extract.o \
+  $O/HashCalc.o \
+  $O/OpenArchive.o \
+  $O/ArchiveExtractCallback.o \
+  $O/ArchiveOpenCallback.o \
+  $O/DefaultName.o \
+  $O/EnumDirItems.o \
+  $O/ExtractingFilePath.o \
+  $O/LoadCodecs.o \
+  $O/SetProperties.o \
+  $O/FileStreams.o \
+  $O/FileSystem.o \
+  $O/ErrorMsg.o \
+  $O/FileLink.o \
+  $O/FilePathAutoRename.o \
+  $O/SortUtils.o \
+  $O/PropIDUtils.o \
+
+CURRENT_OBJS = \
+  $O/StdInStream.o \
+  $O/StdOutStream.o \
+  $O/StdAfx2.o \
+  $O/pluginapi.o \
+  $O/nsis7z.o \
+
+OBJS = \
+  $(ARC_OBJS) \
+  $(SYS_OBJS) \
+  $(NSIS_UI_OBJS) \
+  $(CURRENT_OBJS) \
+
+include ../../7zip_gcc.mak
+
+$O/NsisMain.o: ../../UI/NSIS/Main.cpp
+	$(CXX) $(CXXFLAGS) $<
+
+$O/NsisMainAr.o: ../../UI/NSIS/MainAr.cpp
+	$(CXX) $(CXXFLAGS) $<
+
+$O/NsisBreak.o: ../../UI/NSIS/NSISBreak.cpp
+	$(CXX) $(CXXFLAGS) $<
+
+$O/NsisExtractCallbackConsole.o: ../../UI/NSIS/ExtractCallbackConsole.cpp
+	$(CXX) $(CXXFLAGS) $<
+
+$O/NsisUserInputUtils2.o: ../../UI/NSIS/UserInputUtils2.cpp
+	$(CXX) $(CXXFLAGS) $<
+
+$O/ConsoleOpenCallbackConsole.o: ../../UI/Console/OpenCallbackConsole.cpp
+	$(CXX) $(CXXFLAGS) $<
+
+$O/ConsolePercentPrinter.o: ../../UI/Console/PercentPrinter.cpp
+	$(CXX) $(CXXFLAGS) $<
+
+$O/ConsoleUserInputUtils.o: ../../UI/Console/UserInputUtils.cpp
+	$(CXX) $(CXXFLAGS) $<
+
+$O/StdAfx2.o: StdAfx2.cpp
+	$(CXX) $(CXXFLAGS) $<
+
+$O/pluginapi.o: pluginapi.cpp
+	$(CXX) $(CXXFLAGS) $<
+
+$O/nsis7z.o: nsis7z.cpp
+	$(CXX) $(CXXFLAGS) $<

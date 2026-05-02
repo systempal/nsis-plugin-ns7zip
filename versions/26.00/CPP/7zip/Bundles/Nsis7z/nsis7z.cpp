@@ -181,6 +181,7 @@ EXTRACTFUNCEND
 
 extern "C" BOOL WINAPI DllMain(HANDLE hInst, ULONG ul_reason_for_call, LPVOID lpReserved)
 {
+	(void)lpReserved;
 	g_hInstance2=(HINSTANCE)hInst;
 	if (ul_reason_for_call == DLL_PROCESS_ATTACH)
 	{

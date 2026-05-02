@@ -1,0 +1,6 @@
+LIBRARY nsis7z
+EXPORTS
+  Extract
+  ExtractWithDetails
+  ExtractWithCallback
+  ExtractWithFileCallback

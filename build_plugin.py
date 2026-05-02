@@ -5,7 +5,7 @@ Wraps per-version/per-toolset build scripts.
 Defaults: 7-Zip 26.00, VS2026 (v145 toolset)
 """
 from __future__ import annotations
-import argparse, subprocess, sys
+import argparse, platform, subprocess, sys
 from pathlib import Path
 
 
@@ -16,7 +16,7 @@ class Colors:
 
 
 ROOT = Path(__file__).resolve().parent
-SCRIPTS = {
+WINDOWS_SCRIPTS = {
     "19.00": {"2022": "tools/legacy/build_plugin_vs2022.py",
                "2026": "tools/legacy/build_plugin_vs2026.py"},
     "25.01": {"2022": "tools/legacy/build_plugin_2501_vs2022.py",
@@ -27,6 +27,8 @@ SCRIPTS = {
                "2026": "tools/legacy/build_plugin_zstd_vs2026.py"},
 }
 
+LINUX_SCRIPT = "tools/linux/build_plugin_linux.py"
+
 
 def main() -> int:
     parser = argparse.ArgumentParser(description="Build nsis7z NSIS plugin")
@@ -36,6 +38,8 @@ def main() -> int:
                              "'zstd' uses mcmilk/7-Zip-zstd submodule")
     parser.add_argument("--toolset", choices=["2022", "2026", "auto"], default="auto",
                         help="Visual Studio toolset version (default: auto)")
+    parser.add_argument("--host", choices=["auto", "windows", "linux"], default="auto",
+                        help="Build host path (default: auto detect)")
     parser.add_argument("--version", action="store_true",
                         help="Print plugin version and exit")
     known, rest = parser.parse_known_args()
@@ -49,11 +53,20 @@ def main() -> int:
     print(f"{Colors.BOLD}{Colors.BRIGHT_CYAN}=== Building ns7zip v{ver} "
           f"({zip_label}) ==={Colors.RESET}")
 
+    host = known.host
+    if host == "auto":
+        host = "windows" if platform.system().lower().startswith("win") else "linux"
+
+    if host == "linux":
+        script = ROOT / LINUX_SCRIPT
+        cmd = [sys.executable, str(script), "--7zip-version", known.zip_version] + rest
+        return subprocess.run(cmd).returncode
+
     toolset = known.toolset
     if toolset == "auto":
         toolset = "2026"
 
-    script_rel = SCRIPTS[known.zip_version][toolset]
+    script_rel = WINDOWS_SCRIPTS[known.zip_version][toolset]
     if script_rel is None:
         print(f"ERROR: no {known.zip_version} script for toolset {toolset}", file=sys.stderr)
         return 1

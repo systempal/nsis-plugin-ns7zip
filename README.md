@@ -61,9 +61,16 @@ python build_plugin.py --7zip-version 25.01
 # Specific toolset (2022|2026|auto)
 python build_plugin.py --toolset 2022
 
+# Linux host path (cross-build with MinGW-w64, 26.00)
+python build_plugin.py --host linux
+
 # Print version and exit
 python build_plugin.py --version
 ```
+
+Linux notes:
+- Local Linux path currently supports `--7zip-version 26.00`.
+- Requires MinGW-w64 toolchains (`x86_64-w64-mingw32-*` and `i686-w64-mingw32-*`) and `make`.
 
 ## Repository Structure
 
