@@ -4,10 +4,20 @@ import os
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
-bundle_7zip = ROOT / "versions/26.01-bundle/CPP/7zip"
-vendor_7zip = ROOT / "versions/26.01/CPP/7zip"
-bundle_cpp  = ROOT / "versions/26.01-bundle/CPP"
-vendor_cpp  = ROOT / "versions/26.01/CPP"
+bundle_root = ROOT / "versions/26.01-bundle"
+vendor_root = ROOT / "versions/26.01"
+bundle_7zip = bundle_root / "CPP/7zip"
+vendor_7zip = vendor_root / "CPP/7zip"
+bundle_cpp  = bundle_root / "CPP"
+vendor_cpp  = vendor_root / "CPP"
+
+# Root-level symlinks: C and Asm
+for name in ("C", "Asm"):
+    target = bundle_root / name
+    if not target.exists() and not target.is_symlink():
+        rel = os.path.relpath(vendor_root / name, bundle_root)
+        os.symlink(rel, target)
+        print(f"  symlink: {target.relative_to(ROOT)} -> {rel}")
 
 for item in vendor_7zip.iterdir():
     target = bundle_7zip / item.name
