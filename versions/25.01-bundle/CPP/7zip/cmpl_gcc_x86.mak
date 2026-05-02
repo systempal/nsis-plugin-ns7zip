@@ -1,0 +1,1 @@
+../../../25.01/CPP/7zip/cmpl_gcc_x86.mak

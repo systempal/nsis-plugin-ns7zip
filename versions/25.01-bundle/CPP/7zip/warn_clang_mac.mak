@@ -1,0 +1,1 @@
+../../../25.01/CPP/7zip/warn_clang_mac.mak
