@@ -68,8 +68,53 @@ jobs:
           name: pkg-${{ matrix.config }}
           path: '*.zip'
 
+  build-linux:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: true
+      matrix:
+        config: [x86-ansi, x86-unicode, x64-unicode]
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install MinGW toolchain
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            make \
+            binutils-mingw-w64-i686 \
+            binutils-mingw-w64-x86-64 \
+            g++-mingw-w64-i686 \
+            g++-mingw-w64-x86-64
+
+      - name: Build ${{ matrix.config }} on Linux
+        run: python build_plugin.py --host linux --configs ${{ matrix.config }}
+
+      - name: Collect DLL
+        run: |
+          case "${{ matrix.config }}" in
+            x86-ansi) dir="x86-ansi" ;;
+            x86-unicode) dir="x86-unicode" ;;
+            x64-unicode) dir="amd64-unicode" ;;
+          esac
+          dst="dist/${{ matrix.config }}"
+          mkdir -p "$dst"
+          cp "plugins/$dir/nsis7z.dll" "$dst/"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: linux-build-${{ matrix.config }}
+          path: dist/**
+          if-no-files-found: error
+
   publish:
-    needs: build
+    needs: [build, build-linux]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
