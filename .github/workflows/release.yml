@@ -159,6 +159,24 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v6
 
+      - name: Resolve release tag
+        id: tag
+        shell: bash
+        run: |
+          tag="${{ github.ref_name }}"
+          if [ -z "$tag" ] || [ "$tag" = "main" ]; then
+            tag="${{ inputs.tag }}"
+          fi
+          if [ -z "$tag" ]; then
+            echo "Tag non disponibile. Imposta l'input 'tag' (es. v2.2.1)." >&2
+            exit 1
+          fi
+          case "$tag" in
+            v*) ;;
+            *) tag="v$tag" ;;
+          esac
+          echo "tag=$tag" >> "$GITHUB_OUTPUT"
+
       - name: Download artifacts
         uses: actions/download-artifact@v8
         with:
@@ -167,10 +185,7 @@ jobs:
 
       - name: Extract changelog section
         run: |
-          tag="${{ github.ref_name }}"
-          if [ -z "$tag" ] || [ "$tag" = "main" ]; then
-            tag="${{ inputs.tag }}"
-          fi
+          tag="${{ steps.tag.outputs.tag }}"
           version="${tag#v}"
           awk -v ver="[$version]" '
             /^## / && index($0, ver) { found=1; next }
@@ -191,6 +206,8 @@ jobs:
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v3
         with:
+          tag_name: ${{ steps.tag.outputs.tag }}
+          name: ${{ steps.tag.outputs.tag }}
           files: |
             artifacts/*.zip
             artifacts/**/*.dll
@@ -200,8 +217,7 @@ jobs:
       - name: Update Gitea Release body
         env:
           GITEA_TOKEN: ${{ secrets.GITEA_TOKEN }}
-          INPUT_TAG: ${{ inputs.tag }}
-          GITEA_TAG: ${{ github.ref_name }}
+          GITEA_TAG: ${{ steps.tag.outputs.tag }}
         run: |
           python3 - <<'PY'
           import json
@@ -212,8 +228,6 @@ jobs:
           base = "https://gitea.emulab.it/api/v1"
           repo = "Simone/nsis-plugin-ns7zip"
           tag = os.environ.get("GITEA_TAG", "").strip()
-          if not tag or tag == "main":
-            tag = os.environ.get("INPUT_TAG", "").strip()
           token = os.environ.get("GITEA_TOKEN", "").strip()
 
           if not tag:
