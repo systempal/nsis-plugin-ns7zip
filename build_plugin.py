@@ -23,17 +23,20 @@ WINDOWS_SCRIPTS = {
                "2026": "tools/legacy/build_plugin_2501_vs2026.py"},
     "26.00": {"2022": None,
                "2026": "tools/legacy/build_plugin_2600_vs2026.py"},
+    "26.01": {"2022": None,
+               "2026": "tools/legacy/build_plugin_2601_vs2026.py"},
     "zstd":  {"2022": None,
                "2026": "tools/legacy/build_plugin_zstd_vs2026.py"},
 }
 
 LINUX_SCRIPT = "tools/linux/build_plugin_linux.py"
+LINUX_SUPPORTED_7ZIP = {"25.01", "26.00", "26.01", "zstd"}
 
 
 def main() -> int:
     parser = argparse.ArgumentParser(description="Build nsis7z NSIS plugin")
     parser.add_argument("--7zip-version", dest="zip_version",
-                        choices=["19.00", "25.01", "26.00", "zstd"], default="26.00",
+                        choices=["19.00", "25.01", "26.00", "26.01", "zstd"], default="26.00",
                         help="7-Zip version to build (default: 26.00); "
                              "'zstd' uses mcmilk/7-Zip-zstd submodule")
     parser.add_argument("--toolset", choices=["2022", "2026", "auto"], default="auto",
@@ -58,6 +61,15 @@ def main() -> int:
         host = "windows" if platform.system().lower().startswith("win") else "linux"
 
     if host == "linux":
+        if known.zip_version not in LINUX_SUPPORTED_7ZIP:
+            supported = ", ".join(sorted(LINUX_SUPPORTED_7ZIP))
+            print(
+                "ERROR: Linux local build does not support "
+                f"--7zip-version {known.zip_version}. "
+                f"Supported values: {supported}",
+                file=sys.stderr,
+            )
+            return 2
         script = ROOT / LINUX_SCRIPT
         cmd = [sys.executable, str(script), "--7zip-version", known.zip_version] + rest
         return subprocess.run(cmd).returncode
