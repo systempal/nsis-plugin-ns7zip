@@ -156,16 +156,53 @@ jobs:
         env:
           GITEA_TOKEN: ${{ secrets.GITEA_TOKEN }}
         run: |
-          tag="${{ github.ref_name }}"
-          body=$(cat release_body.md)
-          # Get release ID by tag
-          release_id=$(curl -s \
-            -H "Authorization: token ${GITEA_TOKEN}" \
-            "https://gitea.emulab.it/api/v1/repos/Simone/nsis-plugin-ns7zip/releases/tags/${tag}" \
-            | python3 -c "import sys,json; print(json.load(sys.stdin)['id'])")
-          # Update release body
-          curl -s -X PATCH \
-            -H "Authorization: token ${GITEA_TOKEN}" \
-            -H "Content-Type: application/json" \
-            "https://gitea.emulab.it/api/v1/repos/Simone/nsis-plugin-ns7zip/releases/${release_id}" \
-            -d "{\"body\": $(echo "$body" | python3 -c "import sys,json; print(json.dumps(sys.stdin.read()))")}"
+          python3 - <<'PY'
+          import json
+          import os
+          import urllib.error
+          import urllib.request
+
+          base = "https://gitea.emulab.it/api/v1"
+          repo = "Simone/nsis-plugin-ns7zip"
+          tag = "${{ github.ref_name }}"
+          token = os.environ["GITEA_TOKEN"]
+
+          with open("release_body.md", "r", encoding="utf-8") as f:
+            body = f.read()
+
+          def request(method, path, payload=None):
+            data = json.dumps(payload).encode("utf-8") if payload is not None else None
+            req = urllib.request.Request(
+              f"{base}{path}",
+              data=data,
+              method=method,
+              headers={
+                "Authorization": f"token {token}",
+                "Content-Type": "application/json",
+                "Accept": "application/json",
+              },
+            )
+            with urllib.request.urlopen(req) as resp:
+              return json.loads(resp.read().decode("utf-8"))
+
+          try:
+            release = request("GET", f"/repos/{repo}/releases/tags/{tag}")
+            rid = release["id"]
+            request("PATCH", f"/repos/{repo}/releases/{rid}", {"body": body})
+            print(f"Updated existing Gitea release id={rid} for tag {tag}")
+          except urllib.error.HTTPError as e:
+            if e.code != 404:
+              raise
+            created = request(
+              "POST",
+              f"/repos/{repo}/releases",
+              {
+                "tag_name": tag,
+                "name": tag,
+                "body": body,
+                "draft": False,
+                "prerelease": False,
+              },
+            )
+            print(f"Created Gitea release id={created['id']} for tag {tag}")
+          PY
