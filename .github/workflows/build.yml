@@ -8,23 +8,26 @@
 # Trigger:
 #   - push su main (incluso quello propagato dal mirror Gitea)
 #   - PR aperte su GitHub
-#   - run manuale via UI
+#   - run manuale via UI (senza input)
 
 name: Build
 
 on:
   push:
-    branches: [main]
+    branches:
+      - main
     paths-ignore:
       - '**.md'
       - 'docs/**'
       - 'examples/**'
   pull_request:
-    branches: [main]
+    branches:
+      - main
   workflow_dispatch:
 
 jobs:
   build:
+    if: ${{ false }}
     runs-on: windows-latest
     strategy:
       fail-fast: false
@@ -44,15 +47,30 @@ jobs:
       - name: Setup MSBuild
         uses: microsoft/setup-msbuild@v3
 
+      - name: Build ${{ matrix.config }}
+        run: python build_plugin.py --configs ${{ matrix.config }} --verbosity normal
+
       - name: Read VERSION
         id: version
         shell: pwsh
         run: |
           $v = (Get-Content VERSION -Raw).Trim()
+          $map = @{ 'x86-ansi' = 'x86-ansi'; 'x86-unicode' = 'x86-unicode'; 'x64-unicode' = 'amd64-unicode' }
+          $dir = $map['${{ matrix.config }}']
           "version=$v" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
+          "dir=$dir"     | Out-File -FilePath $env:GITHUB_OUTPUT -Append
 
-      - name: Build ${{ matrix.config }}
-        run: python build_plugin.py --configs ${{ matrix.config }} --verbosity normal
+      - name: Package
+        shell: pwsh
+        run: |
+          $name = "${{ github.event.repository.name }}-${{ steps.version.outputs.version }}-${{ steps.version.outputs.dir }}"
+          $stage = "stage/$name"
+          New-Item -ItemType Directory -Force -Path $stage | Out-Null
+          Copy-Item "dist/${{ steps.version.outputs.dir }}/*" $stage -Recurse
+          Copy-Item README.md, LICENSE, VERSION, CHANGELOG.md $stage
+          if (Test-Path "include")  { Copy-Item "include"  $stage -Recurse }
+          if (Test-Path "examples") { Copy-Item "examples" $stage -Recurse }
+          Compress-Archive -Path "$stage/*" -DestinationPath "$name.zip" -Force
 
       - name: Collect DLL
         shell: pwsh
@@ -63,15 +81,22 @@ jobs:
           New-Item -ItemType Directory -Force -Path $dst | Out-Null
           Copy-Item $src $dst
 
+      - name: Upload zip
+        uses: actions/upload-artifact@v7
+        with:
+          name: pkg-${{ matrix.config }}
+          path: '*.zip'
+
       - name: Upload DLL
         uses: actions/upload-artifact@v7
         with:
           name: ${{ github.event.repository.name }}-${{ steps.version.outputs.version }}-${{ matrix.config }}
-          path: dist/**
+          path: dist/**/*.dll
           if-no-files-found: error
           retention-days: 30
 
   build-linux:
+    if: ${{ false }}
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -98,12 +123,6 @@ jobs:
             g++-mingw-w64-i686 \
             g++-mingw-w64-x86-64
 
-      - name: Read VERSION
-        id: version_linux
-        run: |
-          v="$(tr -d '\r\n' < VERSION)"
-          echo "version=$v" >> "$GITHUB_OUTPUT"
-
       - name: Build ${{ matrix.config }} on Linux
         run: python build_plugin.py --host linux --configs ${{ matrix.config }} --verbose
 
@@ -118,10 +137,24 @@ jobs:
           mkdir -p "$dst"
           cp "plugins/$dir/nsis7z.dll" "$dst/"
 
-      - name: Upload DLL
+      - name: Read VERSION
+        id: version_linux
+        run: |
+          v="$(tr -d '\r\n' < VERSION)"
+          echo "version=$v" >> "$GITHUB_OUTPUT"
+
+      - name: Upload artifact
         uses: actions/upload-artifact@v7
         with:
           name: ${{ github.event.repository.name }}-${{ steps.version_linux.outputs.version }}-${{ matrix.config }}-linux
           path: dist/**
+          if-no-files-found: error
+          retention-days: 30
+
+      - name: Upload DLL
+        uses: actions/upload-artifact@v7
+        with:
+          name: ${{ github.event.repository.name }}-${{ steps.version_linux.outputs.version }}-${{ matrix.config }}-linux-dll
+          path: dist/**/*.dll
           if-no-files-found: error
           retention-days: 30
