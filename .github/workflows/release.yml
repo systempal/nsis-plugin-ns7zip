@@ -157,6 +157,7 @@ jobs:
           GITEA_TOKEN: ${{ secrets.GITEA_TOKEN }}
         run: |
           python3 - <<'PY'
+          import sys
           import json
           import os
           import urllib.error
@@ -186,23 +187,31 @@ jobs:
               return json.loads(resp.read().decode("utf-8"))
 
           try:
-            release = request("GET", f"/repos/{repo}/releases/tags/{tag}")
-            rid = release["id"]
-            request("PATCH", f"/repos/{repo}/releases/{rid}", {"body": body})
-            print(f"Updated existing Gitea release id={rid} for tag {tag}")
+            try:
+              release = request("GET", f"/repos/{repo}/releases/tags/{tag}")
+              rid = release["id"]
+              request("PATCH", f"/repos/{repo}/releases/{rid}", {"body": body})
+              print(f"Updated existing Gitea release id={rid} for tag {tag}")
+            except urllib.error.HTTPError as e:
+              if e.code == 404:
+                created = request(
+                  "POST",
+                  f"/repos/{repo}/releases",
+                  {
+                    "tag_name": tag,
+                    "name": tag,
+                    "body": body,
+                    "draft": False,
+                    "prerelease": False,
+                  },
+                )
+                print(f"Created Gitea release id={created['id']} for tag {tag}")
+              elif e.code in (401, 403):
+                print("::warning::Gitea release sync skipped: token unauthorized/forbidden. Check GITEA_TOKEN permissions (Repository Read+Write).")
+                sys.exit(0)
+              else:
+                raise
           except urllib.error.HTTPError as e:
-            if e.code != 404:
-              raise
-            created = request(
-              "POST",
-              f"/repos/{repo}/releases",
-              {
-                "tag_name": tag,
-                "name": tag,
-                "body": body,
-                "draft": False,
-                "prerelease": False,
-              },
-            )
-            print(f"Created Gitea release id={created['id']} for tag {tag}")
+            print(f"::warning::Gitea release sync skipped due to HTTP {e.code}: {e.reason}")
+            sys.exit(0)
           PY
