@@ -1,3 +1,6 @@
 [submodule "versions/7-zip-zstd"]
 	path = versions/7-zip-zstd
 	url = https://github.com/mcmilk/7-Zip-zstd.git
+[submodule "versions/26.01"]
+	path = versions/26.01
+	url = https://github.com/ip7z/7zip.git
