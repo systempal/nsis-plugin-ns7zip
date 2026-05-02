@@ -1,0 +1,115 @@
+PROG = nsis7z
+
+# Path to the vendor CPP/7zip tree.  Override from the command line for
+# out-of-tree builds (e.g. zstd variant whose sources live in a separate
+# submodule directory):
+#   make -f .../overlay/makefile.gcc VENDOR_7ZIP=/abs/path/7-zip-zstd/CPP/7zip
+VENDOR_7ZIP ?= ../..
+
+# Path to the UI/NSIS source directory.  For versions where NSIS files live
+# in the vendor tree this defaults to $(VENDOR_7ZIP)/UI/NSIS.  Override for
+# bundle-based builds (zstd, 26.01) where UI/NSIS lives in our wrapper dir.
+NSIS_DIR ?= $(VENDOR_7ZIP)/UI/NSIS
+
+# DEF file path – may be overridden to an absolute path so that this
+# makefile can be used with -f without writing anything into the vendor tree.
+DEF_FILE ?= Nsis7z.def
+
+include $(VENDOR_7ZIP)/Bundles/Format7zF/Arc_gcc.mak
+
+ifdef IS_MINGW
+LOCAL_FLAGS_SYS = -DZ7_DEVICE_FILE
+SYS_OBJS = \
+  $O/DLL.o \
+  $O/DllSecur.o \
+  $O/resource.o \
+
+else
+SYS_OBJS = \
+  $O/MyWindows.o \
+
+endif
+
+LOCAL_FLAGS += \
+  $(LOCAL_FLAGS_SYS) \
+  $(LOCAL_FLAGS_EXTRA) \
+
+# C++-only extra flags (e.g. -fpermissive for MSVC-only code).
+# Appended to CXXFLAGS_EXTRA which is used exclusively by the C++ compiler.
+CXXFLAGS_EXTRA += $(LOCAL_CXXFLAGS_EXTRA)
+
+NSIS_UI_OBJS = \
+  $O/NsisMain.o \
+  $O/NsisMainAr.o \
+  $O/NsisBreak.o \
+  $O/NsisExtractCallbackConsole.o \
+  $O/NsisUserInputUtils2.o \
+  $O/ConsoleOpenCallbackConsole.o \
+  $O/ConsolePercentPrinter.o \
+  $O/ConsoleClose.o \
+  $O/ConsoleUserInputUtils.o \
+  $O/Extract.o \
+  $O/HashCalc.o \
+  $O/OpenArchive.o \
+  $O/ArchiveExtractCallback.o \
+  $O/ArchiveOpenCallback.o \
+  $O/DefaultName.o \
+  $O/EnumDirItems.o \
+  $O/ExtractingFilePath.o \
+  $O/LoadCodecs.o \
+  $O/SetProperties.o \
+  $O/FileStreams.o \
+  $O/FileSystem.o \
+  $O/ErrorMsg.o \
+  $O/FileLink.o \
+  $O/FilePathAutoRename.o \
+  $O/SortUtils.o \
+  $O/PropIDUtils.o \
+
+CURRENT_OBJS = \
+  $O/StdInStream.o \
+  $O/StdOutStream.o \
+  $O/StdAfx2.o \
+  $O/pluginapi.o \
+  $O/nsis7z.o \
+
+OBJS = \
+  $(ARC_OBJS) \
+  $(SYS_OBJS) \
+  $(NSIS_UI_OBJS) \
+  $(CURRENT_OBJS) \
+
+include $(VENDOR_7ZIP)/7zip_gcc.mak
+
+$O/NsisMain.o: $(NSIS_DIR)/Main.cpp
+	$(CXX) $(CXXFLAGS) $<
+
+$O/NsisMainAr.o: $(NSIS_DIR)/MainAr.cpp
+	$(CXX) $(CXXFLAGS) $<
+
+$O/NsisBreak.o: $(NSIS_DIR)/NSISBreak.cpp
+	$(CXX) $(CXXFLAGS) $<
+
+$O/NsisExtractCallbackConsole.o: $(NSIS_DIR)/ExtractCallbackConsole.cpp
+	$(CXX) $(CXXFLAGS) -include z7_idecl_noexcept_strip.h $<
+
+$O/NsisUserInputUtils2.o: $(NSIS_DIR)/UserInputUtils2.cpp
+	$(CXX) $(CXXFLAGS) $<
+
+$O/ConsoleOpenCallbackConsole.o: $(VENDOR_7ZIP)/UI/Console/OpenCallbackConsole.cpp
+	$(CXX) $(CXXFLAGS) $<
+
+$O/ConsolePercentPrinter.o: $(VENDOR_7ZIP)/UI/Console/PercentPrinter.cpp
+	$(CXX) $(CXXFLAGS) $<
+
+$O/ConsoleUserInputUtils.o: $(VENDOR_7ZIP)/UI/Console/UserInputUtils.cpp
+	$(CXX) $(CXXFLAGS) $<
+
+$O/StdAfx2.o: StdAfx2.cpp
+	$(CXX) $(CXXFLAGS) $<
+
+$O/pluginapi.o: pluginapi.cpp
+	$(CXX) $(CXXFLAGS) $<
+
+$O/nsis7z.o: nsis7z.cpp
+	$(CXX) $(CXXFLAGS) $<

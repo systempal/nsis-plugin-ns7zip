@@ -64,3 +64,4 @@ tools/check_*.py
 # Plugin-specific
 versions/*/CPP/7zip/*/Release/
 versions/*/CPP/7zip/*/x64/
+_linux_build/

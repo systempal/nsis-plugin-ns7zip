@@ -2,7 +2,11 @@
 """Linux build path for nsis7z plugin.
 
 Builds Windows DLL artifacts from Linux using MinGW-w64 cross compilers.
-Current support: 7-Zip 26.00.
+Supported versions: 7-Zip 25.01, 26.00 and zstd.
+
+All project-owned build-infrastructure files (makefile.gcc, Nsis7z.def) live
+under tools/linux/overlay/ and are never written into the vendor source trees.
+Build artifacts go to _linux_build/<version>/<cfg>/ (gitignored).
 """
 from __future__ import annotations
 
@@ -15,7 +19,56 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
 
-SUPPORTED = {"26.00"}
+OVERLAY = ROOT / "tools" / "linux" / "overlay"
+BUILD_DIR = ROOT / "_linux_build"
+
+SUPPORTED = {"25.01", "26.00", "26.01", "zstd"}
+
+# For 25.01/26.00 the vendor bundle dir already contains our wrapper .cpp
+# files alongside the upstream 7-zip sources.  make is run with -C pointing
+# there so relative paths (../../UI/…) resolve correctly, but the makefile
+# itself comes from OVERLAY and the output objects go to BUILD_DIR.
+#
+# For zstd the 7-zip C++ sources live in the 7-zip-zstd submodule while our
+# NSIS wrapper sits in versions/zstd/.  make is run with -C pointing to the
+# wrapper dir and VENDOR_7ZIP overridden to the submodule tree so that
+# include/source rules resolve correctly without touching the submodule.
+VERSION_LAYOUT = {
+    "25.01": {
+        "vendor_7zip": ROOT / "versions" / "25.01" / "CPP" / "7zip",
+        "bundle_dir":  ROOT / "versions" / "25.01" / "CPP" / "7zip" / "Bundles" / "Nsis7z",
+    },
+    "26.00": {
+        "vendor_7zip": ROOT / "versions" / "26.00" / "CPP" / "7zip",
+        "bundle_dir":  ROOT / "versions" / "26.00" / "CPP" / "7zip" / "Bundles" / "Nsis7z",
+    },
+    "26.01": {
+        "vendor_7zip": ROOT / "versions" / "26.01" / "CPP" / "7zip",
+        "bundle_dir":  ROOT / "versions" / "26.01-bundle" / "CPP" / "7zip" / "Bundles" / "Nsis7z",
+    },
+    # zstd: make runs in our wrapper dir; vendor_7zip points to submodule tree.
+    "zstd": {
+        "vendor_7zip": ROOT / "versions" / "7-zip-zstd" / "CPP" / "7zip",
+        "bundle_dir":  ROOT / "versions" / "zstd" / "CPP" / "7zip" / "Bundles" / "Nsis7z",
+    },
+}
+
+# Per-version C++-only extra flags for GCC/MinGW cross-compilation.
+# These compensate for vendor code written exclusively for MSVC.
+# Passed via LOCAL_CXXFLAGS_EXTRA → appended to CXXFLAGS only (not CFLAGS).
+#
+# If flag-based suppression is insufficient (e.g. the code must be modified),
+# place a patched copy at tools/linux/overlay/src/<version>/<relative-path>
+# and add a rule override in makefile.gcc using the OVERLAY_SRC variable.
+VERSION_EXTRA_CXXFLAGS: dict[str, str] = {
+    # 7-zip 25.01 NSIS UI code was never compiled with GCC:
+    #   - STDMETHODIMP implementations lack `noexcept`/`throw()` while the COM
+    #     interface macros (Z7_COM7F_IMP) declare the virtuals with `throw()`
+    #     (= noexcept in C++17). Fixed per-TU via -include z7_idecl_noexcept_strip.h
+    #     in the specific makefile rule for NsisExtractCallbackConsole.o.
+    #   - Several unused parameters and sign-compare on UInt64 vs. literal -1.
+    "25.01": "-Wno-sign-compare -Wno-unused-parameter",
+}
 
 CONFIGS = {
     "x86-ansi": {
@@ -63,17 +116,18 @@ def _build_one(
     clean: bool,
     cleanup_artifacts: bool,
 ) -> int:
+    layout = VERSION_LAYOUT[zip_version]
+    vendor_7zip = layout["vendor_7zip"]
+    bundle_dir  = layout["bundle_dir"]
+
     cfg = CONFIGS[cfg_name]
     triplet = cfg["triplet"]
 
-    bundle_dir = ROOT / "versions" / zip_version / "CPP" / "7zip" / "Bundles" / "Nsis7z"
-    cpp_root = ROOT / "versions" / zip_version / "CPP"
-    makefile = bundle_dir / "makefile.gcc"
-    if not makefile.exists():
-        print(f"ERROR: Linux makefile not found: {makefile}", file=sys.stderr)
-        return 1
+    # Output objects go to an absolute path under _linux_build/ so nothing
+    # temporary is ever written into the vendor source trees.
+    out_dir = BUILD_DIR / zip_version / cfg_name
+    out_dir.mkdir(parents=True, exist_ok=True)
 
-    out_obj = f"_o_{cfg_name.replace('-', '_')}"
     local_flags = "-DNDEBUG"
     if cfg["unicode"]:
         local_flags += " -DUNICODE -D_UNICODE"
@@ -82,11 +136,30 @@ def _build_one(
         # build so that LPTSTR resolves to char* consistently in all TUs.
         local_flags += " -DZ7_NO_UNICODE"
 
+    # Version-specific workarounds for vendor code that was MSVC-only.
+    # Flags that are C++-only (e.g. -fpermissive) must go into LOCAL_CXXFLAGS_EXTRA
+    # which the makefile appends only to CXXFLAGS, not to CFLAGS.
+    extra_cxx = VERSION_EXTRA_CXXFLAGS.get(zip_version, "")
+
+    # CXX_INCLUDE_FLAGS:
+    #   1. overlay/include – case-sensitivity shims (Windows.h → windows.h, …)
+    #      searched first so they shadow the actual MinGW system headers.
+    #   2. CPP root – so vendor #include paths resolve from any working dir.
+    cpp_root = vendor_7zip.parent  # …/CPP
+    overlay_inc = OVERLAY / "include"
+
+    # For bundle-based builds (zstd, 26.01) the UI/NSIS wrapper files live in
+    # our bundle dir, not in the vendor tree.  Override NSIS_DIR accordingly.
+    bundle_nsis = bundle_dir.parent.parent / "UI" / "NSIS"
+
     base_cmd = [
         "make",
-        "-f",
-        "makefile.gcc",
-        f"O={out_obj}",
+        "-C", str(bundle_dir),
+        "-f", str(OVERLAY / "makefile.gcc"),
+        f"O={out_dir}",
+        f"DEF_FILE={OVERLAY / 'Nsis7z.def'}",
+        f"VENDOR_7ZIP={vendor_7zip}",
+        *([ f"NSIS_DIR={bundle_nsis}" ] if bundle_nsis.is_dir() else []),
         "SystemDrive=1",
         "IS_MINGW=1",
         "MSYSTEM=LINUX",
@@ -95,7 +168,12 @@ def _build_one(
         f"CXX={triplet}-g++",
         f"RC={triplet}-windres",
         f"LOCAL_FLAGS_EXTRA={local_flags} -Wno-unknown-pragmas",
-        f"CXX_INCLUDE_FLAGS=-I{cpp_root}",
+        f"LOCAL_CXXFLAGS_EXTRA={extra_cxx}",
+        # Linux ld is case-sensitive; vendor makefile uses mixed-case lib names
+        # (lUser32, lOle32, …) that don't exist on disk.  Override LIB2 with
+        # fully-expanded lowercase equivalents.
+        "LIB2=-loleaut32 -luuid -ladvapi32 -luser32 -lole32 -lgdi32 -lcomctl32 -lcomdlg32 -lshell32 -lhtmlhelp",
+        f"CXX_INCLUDE_FLAGS=-I{overlay_inc} -I{cpp_root}",
     ]
 
     build_mode = "clean build" if clean else "incremental build"
@@ -113,7 +191,7 @@ def _build_one(
     if proc.returncode != 0:
         return proc.returncode
 
-    built = bundle_dir / out_obj / "nsis7z.dll"
+    built = out_dir / "nsis7z.dll"
     if not built.exists():
         print(f"ERROR: expected artifact not found: {built}", file=sys.stderr)
         return 1
@@ -123,12 +201,12 @@ def _build_one(
     shutil.copy2(built, dest)
 
     if cleanup_artifacts:
-        shutil.rmtree(bundle_dir / out_obj, ignore_errors=True)
+        shutil.rmtree(out_dir, ignore_errors=True)
 
     if verbose:
         print(f"[linux] Copied -> {dest}")
         if cleanup_artifacts:
-            print(f"[linux] Cleaned build artifacts -> {bundle_dir / out_obj}")
+            print(f"[linux] Cleaned build artifacts -> {out_dir}")
     return 0
 
 
@@ -137,7 +215,7 @@ def main() -> int:
     parser.add_argument(
         "--7zip-version",
         dest="zip_version",
-        choices=["19.00", "25.01", "26.00", "zstd"],
+        choices=sorted(SUPPORTED),
         default="26.00",
         help="7-Zip version to build",
     )
@@ -179,14 +257,6 @@ def main() -> int:
     )
     parser.add_argument("--verbose", action="store_true", help="Verbose output")
     args = parser.parse_args()
-
-    if args.zip_version not in SUPPORTED:
-        print(
-            "ERROR: Linux local build is currently supported only for 26.00. "
-            f"Requested: {args.zip_version}",
-            file=sys.stderr,
-        )
-        return 2
 
     _require_tool("make")
     for cfg in CONFIGS.values():
