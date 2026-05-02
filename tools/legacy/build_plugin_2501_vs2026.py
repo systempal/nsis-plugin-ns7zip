@@ -200,7 +200,7 @@ def find_msbuild(vs_version: str = 'auto') -> 'Optional[Tuple[Path, str, str]]':
 def get_project_paths() -> Tuple[Path, Path, Path]:
     """Get project directory, project file, and plugins directory"""
     script_dir = Path(__file__).parent.absolute()
-    project_dir = script_dir.parent.parent / 'versions' / '25.01'
+    project_dir = script_dir.parent.parent / 'versions' / '25.01-bundle'
     project_file = project_dir / 'CPP' / '7zip' / 'Bundles' / 'Nsis7z' / 'Nsis7z_vs2026.vcxproj'
     plugins_dir = script_dir.parent.parent / 'plugins'
     

@@ -182,7 +182,7 @@ def get_project_paths() -> Tuple[Path, Path, Path]:
     script_dir = Path(__file__).parent.resolve()
     
     # Project directory containing 7-Zip 25.01 sources
-    project_dir = script_dir.parent.parent / 'versions' / '25.01'
+    project_dir = script_dir.parent.parent / 'versions' / '25.01-bundle'
     
     # Project file path
     project_file = project_dir / 'CPP' / '7zip' / 'Bundles' / 'Nsis7z' / 'Nsis7z.vcxproj'

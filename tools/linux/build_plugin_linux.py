@@ -24,12 +24,7 @@ BUILD_DIR = ROOT / "_linux_build"
 
 SUPPORTED = {"25.01", "26.00", "26.01", "zstd"}
 
-# For 25.01 the vendor bundle dir already contains our wrapper .cpp files
-# alongside the upstream 7-zip sources.  make is run with -C pointing there so
-# relative paths (../../UI/…) resolve correctly, but the makefile itself comes
-# from OVERLAY and the output objects go to BUILD_DIR.
-#
-# For 26.00, 26.01: the upstream vendor does NOT ship a Nsis7z bundle, so a
+# For all versions the upstream vendor does NOT ship a Nsis7z bundle, so a
 # *-bundle wrapper directory mirrors the vendor tree via symlinks and provides
 # project-owned sources (NSIS UI, wrapper cpp files, vcxproj).
 #
@@ -40,7 +35,7 @@ SUPPORTED = {"25.01", "26.00", "26.01", "zstd"}
 VERSION_LAYOUT = {
     "25.01": {
         "vendor_7zip": ROOT / "versions" / "25.01" / "CPP" / "7zip",
-        "bundle_dir":  ROOT / "versions" / "25.01" / "CPP" / "7zip" / "Bundles" / "Nsis7z",
+        "bundle_dir":  ROOT / "versions" / "25.01-bundle" / "CPP" / "7zip" / "Bundles" / "Nsis7z",
     },
     "26.00": {
         "vendor_7zip": ROOT / "versions" / "26.00" / "CPP" / "7zip",
