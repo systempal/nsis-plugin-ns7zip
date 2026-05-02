@@ -150,3 +150,21 @@ jobs:
             artifacts/*.zip
             artifacts/SHA256SUMS.txt
           body_path: release_body.md
+
+      - name: Update Gitea Release body
+        env:
+          GITEA_TOKEN: ${{ secrets.GITEA_TOKEN }}
+        run: |
+          tag="${{ github.ref_name }}"
+          body=$(cat release_body.md)
+          # Get release ID by tag
+          release_id=$(curl -s \
+            -H "Authorization: token ${GITEA_TOKEN}" \
+            "https://gitea.emulab.it/api/v1/repos/Simone/nsis-plugin-ns7zip/releases/tags/${tag}" \
+            | python3 -c "import sys,json; print(json.load(sys.stdin)['id'])")
+          # Update release body
+          curl -s -X PATCH \
+            -H "Authorization: token ${GITEA_TOKEN}" \
+            -H "Content-Type: application/json" \
+            "https://gitea.emulab.it/api/v1/repos/Simone/nsis-plugin-ns7zip/releases/${release_id}" \
+            -d "{\"body\": $(echo "$body" | python3 -c "import sys,json; print(json.dumps(sys.stdin.read()))")}"
