@@ -7,6 +7,14 @@ e il progetto aderisce al [Semantic Versioning](https://semver.org/spec/v2.0.0.h
 
 ## [Unreleased]
 
+## [2.2.1] — 2026-05-02
+
+### Added
+- Linux CI jobs for the GitHub `build` and `release` workflows using the MinGW-w64 cross-build path
+
+### Changed
+- GitHub Actions workflows now opt into Node 24 for JavaScript-based actions to avoid Node 20 deprecation warnings
+
 ## [2.1.0] — 2026-04-30
 
 ### Added
@@ -36,7 +44,8 @@ e il progetto aderisce al [Semantic Versioning](https://semver.org/spec/v2.0.0.h
 - CI/CD via GitHub Actions (mirror automatico Gitea → GitHub)
 - Documentazione completa (README, CONTRIBUTING, SECURITY)
 
-[Unreleased]: https://gitea.emulab.it/Simone/nsis-plugin-ns7zip/compare/v2.1.0...HEAD
+[Unreleased]: https://gitea.emulab.it/Simone/nsis-plugin-ns7zip/compare/v2.2.1...HEAD
+[2.2.1]: https://gitea.emulab.it/Simone/nsis-plugin-ns7zip/compare/v2.2.0...v2.2.1
 [2.1.0]: https://gitea.emulab.it/Simone/nsis-plugin-ns7zip/compare/v2.0.1...v2.1.0
 [2.0.1]: https://gitea.emulab.it/Simone/nsis-plugin-ns7zip/compare/v2.0.0...v2.0.1
 [2.0.0]: https://gitea.emulab.it/Simone/nsis-plugin-ns7zip/releases/tag/v2.0.0
