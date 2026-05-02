@@ -200,6 +200,7 @@ jobs:
                 "Authorization": f"{auth_scheme} {token}",
                 "Content-Type": "application/json",
                 "Accept": "application/json",
+                "User-Agent": "GitHubActions-GiteaReleaseSync/1.0",
               },
             )
             with urllib.request.urlopen(req) as resp:
@@ -315,6 +316,7 @@ jobs:
                 "Authorization": f"{auth_scheme} {token}",
                 "Content-Type": "application/json",
                 "Accept": "application/json",
+                "User-Agent": "GitHubActions-GiteaReleaseSync/1.0",
               },
             )
             with urllib.request.urlopen(req) as resp:
