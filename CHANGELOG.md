@@ -7,6 +7,17 @@ e il progetto aderisce al [Semantic Versioning](https://semver.org/spec/v2.0.0.h
 
 ## [Unreleased]
 
+## [2.2.2] — 2026-05-02
+
+### Added
+- `tools/update_gitea_releases.py`: one-shot script to backfill Gitea release bodies with CHANGELOG content via the Gitea API
+- `tools/release-notes/`: per-version Markdown snippets used by the backfill script
+
+### Changed
+- Release workflow now extracts the relevant CHANGELOG section and uses it as the GitHub Release body (`body_path`)
+- Release workflow adds a step to update the corresponding Gitea release body via API (`GITEA_TOKEN` secret)
+- All GitHub Actions upgraded to node24-native major versions (no more Node 20 deprecation warnings)
+
 ## [2.2.1] — 2026-05-02
 
 ### Added
@@ -55,7 +66,8 @@ e il progetto aderisce al [Semantic Versioning](https://semver.org/spec/v2.0.0.h
 - CI/CD via GitHub Actions (mirror automatico Gitea → GitHub)
 - Documentazione completa (README, CONTRIBUTING, SECURITY)
 
-[Unreleased]: https://gitea.emulab.it/Simone/nsis-plugin-ns7zip/compare/v2.2.1...HEAD
+[Unreleased]: https://gitea.emulab.it/Simone/nsis-plugin-ns7zip/compare/v2.2.2...HEAD
+[2.2.2]: https://gitea.emulab.it/Simone/nsis-plugin-ns7zip/compare/v2.2.1...v2.2.2
 [2.2.1]: https://gitea.emulab.it/Simone/nsis-plugin-ns7zip/compare/v2.2.0...v2.2.1
 [2.2.0]: https://gitea.emulab.it/Simone/nsis-plugin-ns7zip/compare/v2.1.0...v2.2.0
 [2.1.0]: https://gitea.emulab.it/Simone/nsis-plugin-ns7zip/compare/v2.0.1...v2.1.0
