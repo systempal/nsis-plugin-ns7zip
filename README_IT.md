@@ -61,9 +61,16 @@ python build_plugin.py --7zip-version 25.01
 # Toolset specifico (2022|2026|auto)
 python build_plugin.py --toolset 2022
 
+# Path Linux (cross-build con MinGW-w64, 26.00)
+python build_plugin.py --host linux
+
 # Stampa versione ed esce
 python build_plugin.py --version
 ```
+
+Note Linux:
+- Il path Linux locale supporta attualmente `--7zip-version 26.00`.
+- Richiede toolchain MinGW-w64 (`x86_64-w64-mingw32-*` e `i686-w64-mingw32-*`) e `make`.
 
 ## Struttura Repository
 
@@ -101,3 +108,7 @@ Aggiunto supporto per estrarre archivi `.exe` creati con NSIS (non presente nel 
 - Igor Pavlov (7-Zip)
 - Afrow UK (Plugin originale)
 - Simone (Supporto x64, VS2022/VS2026, ZIP, NSIS handler, ExtractWithFileCallback)
+
+---
+
+*Vedi [README.md](README.md) per la versione in inglese.*
