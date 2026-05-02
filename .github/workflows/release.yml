@@ -13,18 +13,12 @@ on:
       tag:
         description: 'Tag versione (es. v1.7.0)'
         required: true
-      gitea_only:
-        description: 'Esegui solo sync release body su Gitea (salta build e GitHub release)'
-        type: boolean
-        required: false
-        default: false
 
 permissions:
   contents: write
 
 jobs:
   build:
-    if: ${{ !(github.event_name == 'workflow_dispatch' && inputs.gitea_only) }}
     runs-on: windows-latest
     strategy:
       fail-fast: true
@@ -75,7 +69,6 @@ jobs:
           path: '*.zip'
 
   build-linux:
-    if: ${{ !(github.event_name == 'workflow_dispatch' && inputs.gitea_only) }}
     runs-on: ubuntu-latest
     strategy:
       fail-fast: true
@@ -121,7 +114,6 @@ jobs:
           if-no-files-found: error
 
   publish:
-    if: ${{ !(github.event_name == 'workflow_dispatch' && inputs.gitea_only) }}
     needs: [build, build-linux]
     runs-on: ubuntu-latest
     steps:
@@ -256,118 +248,3 @@ jobs:
             print(f"Created Gitea release id={created['id']} for tag {tag}")
           PY
 
-  sync-gitea-only:
-    if: ${{ github.event_name == 'workflow_dispatch' && inputs.gitea_only }}
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v6
-
-      - name: Extract changelog section
-        run: |
-          tag="${{ inputs.tag }}"
-          version="${tag#v}"
-          awk -v ver="[$version]" '
-            /^## / && index($0, ver) { found=1; next }
-            found && /^## / { exit }
-            found { print }
-          ' CHANGELOG.md > release_body.md
-          if [ ! -s release_body.md ]; then
-            echo "Sezione CHANGELOG non trovata per $tag"
-            exit 1
-          fi
-          echo "" >> release_body.md
-          echo "---" >> release_body.md
-          echo "_Repository primario: vedi link Gitea nel README. Il mirror GitHub è generato automaticamente._" >> release_body.md
-
-      - name: Update Gitea Release body
-        env:
-          GITEA_TOKEN: ${{ secrets.GITEA_TOKEN }}
-          INPUT_TAG: ${{ inputs.tag }}
-          GITEA_TAG: ${{ github.ref_name }}
-        run: |
-          python3 - <<'PY'
-          import json
-          import os
-          import urllib.error
-          import urllib.request
-
-          base = "https://gitea.emulab.it/api/v1"
-          repo = "Simone/nsis-plugin-ns7zip"
-          tag = os.environ.get("GITEA_TAG", "").strip()
-          if not tag or tag == "main":
-            tag = os.environ.get("INPUT_TAG", "").strip()
-          token = os.environ.get("GITEA_TOKEN", "").strip()
-
-          if not tag:
-            raise SystemExit("Tag non disponibile: imposta input 'tag' in workflow_dispatch")
-          if not token:
-            raise SystemExit("GITEA_TOKEN is missing or empty")
-
-          with open("release_body.md", "r", encoding="utf-8") as f:
-            body = f.read()
-
-          def request(method, path, payload=None, auth_scheme="token"):
-            data = json.dumps(payload).encode("utf-8") if payload is not None else None
-            req = urllib.request.Request(
-              f"{base}{path}",
-              data=data,
-              method=method,
-              headers={
-                "Authorization": f"{auth_scheme} {token}",
-                "Content-Type": "application/json",
-                "Accept": "application/json",
-                "User-Agent": "GitHubActions-GiteaReleaseSync/1.0",
-              },
-            )
-            with urllib.request.urlopen(req) as resp:
-              return json.loads(resp.read().decode("utf-8"))
-
-          auth_scheme = None
-          last_error = None
-          for scheme in ("token", "Bearer"):
-            try:
-              user = request("GET", "/user", auth_scheme=scheme)
-              auth_scheme = scheme
-              print(f"Gitea auth OK via '{scheme}' as user: {user.get('login', '<unknown>')}")
-              break
-            except urllib.error.HTTPError as e:
-              try:
-                details = e.read().decode("utf-8", errors="replace")
-              except Exception:
-                details = ""
-              last_error = f"HTTP {e.code} {e.reason} ({scheme}) {details}".strip()
-
-          if not auth_scheme:
-            raise SystemExit(
-              "Gitea authentication failed for both 'token' and 'Bearer'. "
-              "Check secret GITEA_TOKEN value and permissions (Repository Read+Write). "
-              f"Last error: {last_error}"
-            )
-
-          try:
-            release = request("GET", f"/repos/{repo}/releases/tags/{tag}", auth_scheme=auth_scheme)
-            rid = release["id"]
-            request("PATCH", f"/repos/{repo}/releases/{rid}", {"body": body}, auth_scheme=auth_scheme)
-            print(f"Updated existing Gitea release id={rid} for tag {tag}")
-          except urllib.error.HTTPError as e:
-            if e.code != 404:
-              try:
-                details = e.read().decode("utf-8", errors="replace")
-              except Exception:
-                details = ""
-              raise SystemExit(f"Gitea release lookup/update failed: HTTP {e.code} {e.reason}. {details}".strip())
-
-            created = request(
-              "POST",
-              f"/repos/{repo}/releases",
-              {
-                "tag_name": tag,
-                "name": tag,
-                "body": body,
-                "draft": False,
-                "prerelease": False,
-              },
-              auth_scheme=auth_scheme,
-            )
-            print(f"Created Gitea release id={created['id']} for tag {tag}")
-          PY
