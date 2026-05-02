@@ -15,6 +15,17 @@ e il progetto aderisce al [Semantic Versioning](https://semver.org/spec/v2.0.0.h
 ### Changed
 - GitHub Actions workflows now opt into Node 24 for JavaScript-based actions to avoid Node 20 deprecation warnings
 
+## [2.2.0] — 2026-05-02
+
+### Added
+- Linux MinGW-w64 cross-build support in `build_plugin.py` via `--host linux`
+- `tools/linux/build_plugin_linux.py` for standalone Linux builds
+- Color output and progress spinner in all legacy build scripts
+
+### Changed
+- `build_plugin.py` now supports both Windows (MSBuild) and Linux (MinGW-w64) targets
+- Windows build-script f-string fixes
+
 ## [2.1.0] — 2026-04-30
 
 ### Added
@@ -46,6 +57,7 @@ e il progetto aderisce al [Semantic Versioning](https://semver.org/spec/v2.0.0.h
 
 [Unreleased]: https://gitea.emulab.it/Simone/nsis-plugin-ns7zip/compare/v2.2.1...HEAD
 [2.2.1]: https://gitea.emulab.it/Simone/nsis-plugin-ns7zip/compare/v2.2.0...v2.2.1
+[2.2.0]: https://gitea.emulab.it/Simone/nsis-plugin-ns7zip/compare/v2.1.0...v2.2.0
 [2.1.0]: https://gitea.emulab.it/Simone/nsis-plugin-ns7zip/compare/v2.0.1...v2.1.0
 [2.0.1]: https://gitea.emulab.it/Simone/nsis-plugin-ns7zip/compare/v2.0.0...v2.0.1
 [2.0.0]: https://gitea.emulab.it/Simone/nsis-plugin-ns7zip/releases/tag/v2.0.0

@@ -12,9 +12,6 @@
 
 name: Build
 
-env:
-  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
-
 on:
   push:
     branches: [main]
@@ -35,17 +32,17 @@ jobs:
         config: [x86-ansi, x86-unicode, x64-unicode]
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           submodules: recursive
 
       - name: Setup Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v6
         with:
           python-version: '3.11'
 
       - name: Setup MSBuild
-        uses: microsoft/setup-msbuild@v2
+        uses: microsoft/setup-msbuild@v3
 
       - name: Read VERSION
         id: version
@@ -67,7 +64,7 @@ jobs:
           Copy-Item $src $dst
 
       - name: Upload DLL
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: ${{ github.event.repository.name }}-${{ steps.version.outputs.version }}-${{ matrix.config }}
           path: dist/**
@@ -82,12 +79,12 @@ jobs:
         config: [x86-ansi, x86-unicode, x64-unicode]
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           submodules: recursive
 
       - name: Setup Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v6
         with:
           python-version: '3.11'
 
@@ -122,7 +119,7 @@ jobs:
           cp "plugins/$dir/nsis7z.dll" "$dst/"
 
       - name: Upload DLL
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: ${{ github.event.repository.name }}-${{ steps.version_linux.outputs.version }}-${{ matrix.config }}-linux
           path: dist/**
