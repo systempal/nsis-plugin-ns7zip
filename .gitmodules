@@ -7,3 +7,6 @@
 [submodule "versions/26.00"]
 	path = versions/26.00
 	url = https://github.com/ip7z/7zip.git
+[submodule "versions/25.01"]
+	path = versions/25.01
+	url = https://github.com/ip7z/7zip.git
