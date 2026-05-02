@@ -150,7 +150,7 @@ jobs:
         run: |
           tag="${{ steps.tag.outputs.tag }}"
           version="${tag#v}"
-          zip_name="${{ github.event.repository.name }}-${version}-plugins.zip"
+          zip_name="${{ github.event.repository.name }}-${version}-bundle.zip"
           (cd dll-bundle && zip -r "../$zip_name" .)
           echo "zip_name=$zip_name" >> "$GITHUB_OUTPUT"
 
