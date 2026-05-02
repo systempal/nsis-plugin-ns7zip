@@ -169,21 +169,25 @@ jobs:
             SHA256SUMS.txt
           body_path: release_body.md
 
-      - name: Update Gitea Release body
+      - name: Update Gitea Release and upload assets
         env:
           GITEA_TOKEN: ${{ secrets.GITEA_TOKEN }}
           GITEA_TAG: ${{ steps.tag.outputs.tag }}
+          ZIP_NAME: ${{ steps.pkg.outputs.zip_name }}
         run: |
           python3 - <<'PY'
           import json
+          import mimetypes
           import os
           import urllib.error
           import urllib.request
+          from pathlib import Path
 
           base = "https://gitea.emulab.it/api/v1"
           repo = "Simone/nsis-plugin-ns7zip"
           tag = os.environ.get("GITEA_TAG", "").strip()
           token = os.environ.get("GITEA_TOKEN", "").strip()
+          zip_name = os.environ.get("ZIP_NAME", "").strip()
 
           if not tag:
             raise SystemExit("Tag non disponibile: imposta input 'tag' in workflow_dispatch")
@@ -203,6 +207,29 @@ jobs:
                 "Authorization": f"{auth_scheme} {token}",
                 "Content-Type": "application/json",
                 "Accept": "application/json",
+                "User-Agent": "GitHubActions-GiteaReleaseSync/1.0",
+              },
+            )
+            with urllib.request.urlopen(req) as resp:
+              return json.loads(resp.read().decode("utf-8"))
+
+          def upload_asset(rid, path, auth_scheme):
+            p = Path(path)
+            mime = mimetypes.guess_type(p.name)[0] or "application/octet-stream"
+            data = p.read_bytes()
+            boundary = "----FormBoundary7MA4YWxkTrZu0gW"
+            body_parts = (
+              f"--{boundary}\r\n"
+              f'Content-Disposition: form-data; name="attachment"; filename="{p.name}"\r\n'
+              f"Content-Type: {mime}\r\n\r\n"
+            ).encode() + data + f"\r\n--{boundary}--\r\n".encode()
+            req = urllib.request.Request(
+              f"{base}/repos/{repo}/releases/{rid}/assets?name={p.name}",
+              data=body_parts,
+              method="POST",
+              headers={
+                "Authorization": f"{auth_scheme} {token}",
+                "Content-Type": f"multipart/form-data; boundary={boundary}",
                 "User-Agent": "GitHubActions-GiteaReleaseSync/1.0",
               },
             )
@@ -256,6 +283,23 @@ jobs:
               },
               auth_scheme=auth_scheme,
             )
-            print(f"Created Gitea release id={created['id']} for tag {tag}")
+            rid = created["id"]
+            print(f"Created Gitea release id={rid} for tag {tag}")
+
+          # Rimuovi asset già presenti con lo stesso nome (retag idempotente)
+          existing = request("GET", f"/repos/{repo}/releases/{rid}/assets", auth_scheme=auth_scheme)
+          upload_names = {zip_name, "SHA256SUMS.txt"}
+          for asset in existing:
+            if asset["name"] in upload_names:
+              request("DELETE", f"/repos/{repo}/releases/assets/{asset['id']}", auth_scheme=auth_scheme)
+              print(f"Deleted existing asset: {asset['name']}")
+
+          # Carica ZIP e SHA256SUMS
+          for f in [zip_name, "SHA256SUMS.txt"]:
+            if Path(f).exists():
+              result = upload_asset(rid, f, auth_scheme)
+              print(f"Uploaded {f} -> {result.get('browser_download_url', result.get('id'))}")
+            else:
+              print(f"WARNING: {f} not found, skipping upload")
           PY
 
