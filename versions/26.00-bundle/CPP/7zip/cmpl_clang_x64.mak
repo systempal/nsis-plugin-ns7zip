@@ -1,0 +1,1 @@
+../../../26.00/CPP/7zip/cmpl_clang_x64.mak

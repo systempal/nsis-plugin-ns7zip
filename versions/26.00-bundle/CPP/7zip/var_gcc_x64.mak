@@ -1,0 +1,1 @@
+../../../26.00/CPP/7zip/var_gcc_x64.mak
