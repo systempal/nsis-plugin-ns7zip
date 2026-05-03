@@ -7,6 +7,11 @@ e il progetto aderisce al [Semantic Versioning](https://semver.org/spec/v2.0.0.h
 
 ## [Unreleased]
 
+## [2.3.4] — 2026-05-03
+
+### Fixed
+- Windows build error `C1083: Cannot open include file` for `Common/Common.h`, `IPassword.h`, `C/Alloc.h` and other vendor headers in bundle source files. Bundle NSIS sources (`Main.cpp`, `ExtractCallbackConsole.cpp`, `MainAr.cpp`, `StdAfx.h`) use relative `../` includes that resolve correctly on Linux via POSIX symlinks but fail on Windows where no symlinks exist. Added `versions/VER/CPP/7zip/UI/Common/` to `AdditionalIncludeDirectories` in all five bundle vcxproj files (25.01, 26.00, 26.01) so MSVC resolves the relative paths against the vendor tree.
+
 ## [2.3.3] — 2026-05-03
 
 ### Fixed
