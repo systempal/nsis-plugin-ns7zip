@@ -263,7 +263,7 @@ def main() -> int:
         "--7zip-version",
         dest="zip_version",
         choices=sorted(SUPPORTED),
-        default="26.00",
+        default="26.01",
         help="7-Zip version to build",
     )
     parser.add_argument(

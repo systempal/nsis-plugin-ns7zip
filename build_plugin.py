@@ -36,7 +36,7 @@ LINUX_SUPPORTED_7ZIP = {"25.01", "26.00", "26.01", "zstd"}
 def main() -> int:
     parser = argparse.ArgumentParser(description="Build nsis7z NSIS plugin")
     parser.add_argument("--7zip-version", dest="zip_version",
-                        choices=["19.00", "25.01", "26.00", "26.01", "zstd"], default="26.00",
+                        choices=["19.00", "25.01", "26.00", "26.01", "zstd"], default="26.01",
                         help="7-Zip version to build (default: 26.00); "
                              "'zstd' uses mcmilk/7-Zip-zstd submodule")
     parser.add_argument("--toolset", choices=["2022", "2026", "auto"], default="auto",
