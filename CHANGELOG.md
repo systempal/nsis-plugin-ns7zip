@@ -7,26 +7,6 @@ e il progetto aderisce al [Semantic Versioning](https://semver.org/spec/v2.0.0.h
 
 ## [Unreleased]
 
-## [2.3.4] — 2026-05-03
-
-### Fixed
-- Windows build error `C1083: Cannot open include file` for `Common/Common.h`, `IPassword.h`, `C/Alloc.h` and other vendor headers in bundle source files. Bundle NSIS sources (`Main.cpp`, `ExtractCallbackConsole.cpp`, `MainAr.cpp`, `StdAfx.h`) use relative `../` includes that resolve correctly on Linux via POSIX symlinks but fail on Windows where no symlinks exist. Added `versions/VER/CPP/7zip/UI/Common/` to `AdditionalIncludeDirectories` in all five bundle vcxproj files (25.01, 26.00, 26.01) so MSVC resolves the relative paths against the vendor tree.
-
-## [2.3.3] — 2026-05-03
-
-### Fixed
-- f-string `/t:{'Rebuild' if rebuild else 'Build'}` in all `tools/legacy/` build scripts caused `SyntaxError` on Python 3.10/3.11 when the outer f-string also uses single quotes; replaced with plain string concatenation `'/t:' + ('Rebuild' if rebuild else 'Build')`
-
-## [2.3.2] — 2026-05-03
-
-### Fixed
-- Additional f-string nested double-quote expressions (`{"-"*50}`, `{"Rebuild" if rebuild else "Build"}`) in all `tools/legacy/` build scripts; replaced with single-quoted equivalents for Python 3.10/3.11 compatibility
-
-## [2.3.1] — 2026-05-03
-
-### Fixed
-- f-string syntax error in all `tools/legacy/` build scripts: nested double-quoted expressions (`{"="*60}`) are only valid in Python 3.12+; replaced with single-quoted equivalents (`{'='*60}`) for compatibility with Python 3.10/3.11 used on CI
-
 ## [2.3.0] — 2026-05-03
 
 ### Added
@@ -36,6 +16,10 @@ e il progetto aderisce al [Semantic Versioning](https://semver.org/spec/v2.0.0.h
 - Default 7-zip version changed from `26.00` to `26.01` in `build_plugin.py` and `tools/linux/build_plugin_linux.py`
 - Renamed `versions/zstd` → `versions/zstd-bundle` for naming consistency with the other bundle directories
 - Auto-generated bundle symlinks are now excluded from git tracking (`.gitignore`)
+
+### Fixed
+- Windows build error `C1083: Cannot open include file` for `Common/Common.h`, `IPassword.h`, `C/Alloc.h` and other vendor headers: added `versions/VER/CPP/7zip/UI/Common/` to `AdditionalIncludeDirectories` in all five bundle vcxproj files (25.01, 26.00, 26.01)
+- f-string nested-quote syntax errors in all `tools/legacy/` build scripts (patterns `{"="*60}`, `{"-"*50}`, `{'Rebuild' if ...}`): replaced with Python 3.10/3.11-compatible equivalents
 
 ### Removed
 - One-shot `tools/fix_bundle_vcxproj_paths.py` helper (no longer needed)
