@@ -7,6 +7,11 @@ e il progetto aderisce al [Semantic Versioning](https://semver.org/spec/v2.0.0.h
 
 ## [Unreleased]
 
+## [2.3.3] — 2026-05-03
+
+### Fixed
+- f-string `/t:{'Rebuild' if rebuild else 'Build'}` in all `tools/legacy/` build scripts caused `SyntaxError` on Python 3.10/3.11 when the outer f-string also uses single quotes; replaced with plain string concatenation `'/t:' + ('Rebuild' if rebuild else 'Build')`
+
 ## [2.3.2] — 2026-05-03
 
 ### Fixed
