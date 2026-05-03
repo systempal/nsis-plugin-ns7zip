@@ -816,9 +816,9 @@ Examples:
         configs_to_build = [CONFIGS[name] for name in args.configs]
     
     # Print header
-    print(f"{Colors.BOLD}{Colors.BRIGHT_CYAN}{"="*60}{Colors.RESET}")
+    print(f"{Colors.BOLD}{Colors.BRIGHT_CYAN}{'='*60}{Colors.RESET}")
     print(f"{Colors.BOLD}{Colors.BRIGHT_CYAN}Building nsis7z plugin (VS2026){Colors.RESET} - {Colors.BRIGHT_WHITE}{len(configs_to_build)}{Colors.RESET} configuration(s)")
-    print(f"{Colors.BOLD}{Colors.BRIGHT_CYAN}{"="*60}{Colors.RESET}")
+    print(f"{Colors.BOLD}{Colors.BRIGHT_CYAN}{'='*60}{Colors.RESET}")
     print(f"{Colors.CYAN}Visual Studio:{Colors.RESET}  {Colors.BRIGHT_WHITE}{vs_version_name} (toolset {platform_toolset}){Colors.RESET}")
     print(f"{Colors.CYAN}MSBuild:{Colors.RESET}        {Colors.BRIGHT_WHITE}{msbuild_path}{Colors.RESET}")
     print(f"{Colors.CYAN}Project:{Colors.RESET}        {Colors.BRIGHT_WHITE}{project_file}{Colors.RESET}")
@@ -922,9 +922,9 @@ Examples:
     all_success = all(success for _, success, _, _, _ in build_results)
     
     if all_success:
-        print(f"{Colors.BOLD}{Colors.BRIGHT_GREEN}{"="*50}{Colors.RESET}")
+        print(f"{Colors.BOLD}{Colors.BRIGHT_GREEN}{'='*50}{Colors.RESET}")
         print(f"{Colors.BOLD}{Colors.BRIGHT_GREEN}ALL BUILDS SUCCESSFUL!{Colors.RESET}")
-        print(f"{Colors.BOLD}{Colors.BRIGHT_GREEN}{"="*50}{Colors.RESET}")
+        print(f"{Colors.BOLD}{Colors.BRIGHT_GREEN}{'='*50}{Colors.RESET}")
         print("\nPlugins copied to:")
         for config, _, build_time, file_size, dest_path in build_results:
             dest = dest_path if dest_path else plugins_dir / config.dest_dir / 'nsis7z.dll'
@@ -935,9 +935,9 @@ Examples:
             print()
             clean_build_artifacts(project_dir, configs_to_build)
     else:
-        print(f"{Colors.BOLD}{Colors.RED}{"="*50}{Colors.RESET}")
+        print(f"{Colors.BOLD}{Colors.RED}{'='*50}{Colors.RESET}")
         print(f"{Colors.BOLD}{Colors.RED}SOME BUILDS FAILED!{Colors.RESET}")
-        print(f"{Colors.BOLD}{Colors.RED}{"="*50}{Colors.RESET}")
+        print(f"{Colors.BOLD}{Colors.RED}{'='*50}{Colors.RESET}")
         print("\nFailed configurations:")
         for config, success, build_time, file_size, dest_path in build_results:
             if not success:
