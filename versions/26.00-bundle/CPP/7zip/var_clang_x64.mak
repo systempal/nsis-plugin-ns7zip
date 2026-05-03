@@ -1,1 +1,0 @@
-../../../26.00/CPP/7zip/var_clang_x64.mak

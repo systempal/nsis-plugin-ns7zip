@@ -1,1 +1,0 @@
-../../../25.01/CPP/7zip/var_mac_x64.mak
