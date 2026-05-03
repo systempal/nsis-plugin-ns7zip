@@ -7,6 +7,19 @@ e il progetto aderisce al [Semantic Versioning](https://semver.org/spec/v2.0.0.h
 
 ## [Unreleased]
 
+## [2.3.0] — 2026-05-03
+
+### Added
+- Auto-recreation of bundle POSIX symlinks on Linux if missing after a fresh clone (`_ensure_bundle_symlinks()` in `tools/linux/build_plugin_linux.py`)
+
+### Changed
+- Default 7-zip version changed from `26.00` to `26.01` in `build_plugin.py` and `tools/linux/build_plugin_linux.py`
+- Renamed `versions/zstd` → `versions/zstd-bundle` for naming consistency with the other bundle directories
+- Auto-generated bundle symlinks are now excluded from git tracking (`.gitignore`)
+
+### Removed
+- One-shot `tools/fix_bundle_vcxproj_paths.py` helper (no longer needed)
+
 ## [2.2.2] — 2026-05-02
 
 ### Added
