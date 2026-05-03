@@ -7,6 +7,11 @@ e il progetto aderisce al [Semantic Versioning](https://semver.org/spec/v2.0.0.h
 
 ## [Unreleased]
 
+## [2.3.2] — 2026-05-03
+
+### Fixed
+- Additional f-string nested double-quote expressions (`{"-"*50}`, `{"Rebuild" if rebuild else "Build"}`) in all `tools/legacy/` build scripts; replaced with single-quoted equivalents for Python 3.10/3.11 compatibility
+
 ## [2.3.1] — 2026-05-03
 
 ### Fixed
