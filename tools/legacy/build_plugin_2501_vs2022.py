@@ -328,7 +328,7 @@ def build_configuration(
     cmd = [
         str(msbuild_path),
         str(project_file),
-        f'/t:{'Rebuild' if rebuild else 'Build'}',
+        '/t:' + ('Rebuild' if rebuild else 'Build'),
         f'/p:Configuration={config.config}',
         f'/p:Platform={config.platform}',
         f'/p:OutDir=Build\\{config.name}\\',
