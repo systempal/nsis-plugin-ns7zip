@@ -7,6 +7,11 @@ e il progetto aderisce al [Semantic Versioning](https://semver.org/spec/v2.0.0.h
 
 ## [Unreleased]
 
+## [2.3.1] — 2026-05-03
+
+### Fixed
+- f-string syntax error in all `tools/legacy/` build scripts: nested double-quoted expressions (`{"="*60}`) are only valid in Python 3.12+; replaced with single-quoted equivalents (`{'='*60}`) for compatibility with Python 3.10/3.11 used on CI
+
 ## [2.3.0] — 2026-05-03
 
 ### Added
