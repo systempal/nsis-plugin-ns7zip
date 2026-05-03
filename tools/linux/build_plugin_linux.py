@@ -107,6 +107,30 @@ def _resolve_jobs(value: str) -> int:
     return jobs
 
 
+def _ensure_bundle_symlinks(zip_version: str, bundle_dir: Path, vendor_7zip: Path) -> None:
+    """Recreate bundle symlinks if they are missing (e.g. after a fresh clone).
+
+    Symlinks are no longer committed to git (they are POSIX-only and break
+    Windows clones), so they must be created on-the-fly on Linux before make
+    can resolve the relative source paths inside the bundle directory.
+    """
+    # A sentinel: if the vendor C/ directory is not reachable via the bundle
+    # root symlink, assume all symlinks need to be (re)created.
+    sentinel = bundle_dir.parents[3] / "C"  # bundle/CPP/7zip/../../../C = bundle/C
+    if sentinel.exists():
+        return  # symlinks already in place
+
+    setup_script = ROOT / "tools" / "linux" / "setup_bundle_symlinks.py"
+    print(f"[linux] Bundle symlinks missing for {zip_version}, recreating via {setup_script.name} ...")
+    proc = subprocess.run(
+        [sys.executable, str(setup_script), zip_version],
+        cwd=ROOT,
+    )
+    if proc.returncode != 0:
+        print(f"ERROR: setup_bundle_symlinks.py failed for {zip_version}", file=sys.stderr)
+        sys.exit(proc.returncode)
+
+
 def _build_one(
     zip_version: str,
     cfg_name: str,
@@ -118,6 +142,10 @@ def _build_one(
     layout = VERSION_LAYOUT[zip_version]
     vendor_7zip = layout["vendor_7zip"]
     bundle_dir  = layout["bundle_dir"]
+
+    # Symlinks are not committed to git; recreate them on Linux if missing.
+    if zip_version in VERSION_LAYOUT and zip_version != "zstd":
+        _ensure_bundle_symlinks(zip_version, bundle_dir, vendor_7zip)
 
     cfg = CONFIGS[cfg_name]
     triplet = cfg["triplet"]
