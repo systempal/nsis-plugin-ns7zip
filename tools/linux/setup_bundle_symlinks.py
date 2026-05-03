@@ -8,6 +8,7 @@ Example:
     python3 setup_bundle_symlinks.py 25.01
     python3 setup_bundle_symlinks.py 26.00
     python3 setup_bundle_symlinks.py 26.01
+    python3 setup_bundle_symlinks.py zstd
 """
 import os
 import sys
@@ -19,9 +20,14 @@ if len(sys.argv) != 2:
 
 version = sys.argv[1]
 
+# For versions where the vendor directory name differs from the bundle version key.
+VENDOR_DIR = {
+    "zstd": "7-zip-zstd",
+}
+
 ROOT = Path(__file__).resolve().parents[2]
 bundle_root = ROOT / f"versions/{version}-bundle"
-vendor_root = ROOT / f"versions/{version}"
+vendor_root = ROOT / "versions" / VENDOR_DIR.get(version, version)
 
 if not vendor_root.exists():
     print(f"Error: vendor directory not found: {vendor_root}", file=sys.stderr)

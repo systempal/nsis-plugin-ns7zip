@@ -5,7 +5,7 @@ Supports multiple build configurations with flexible parameters.
 Uses PlatformToolset v145 (Visual Studio 2026 Build Tools).
 
 The 7-Zip ZS source is pulled from the git submodule at versions/7-zip-zstd/.
-The NSIS plugin wrapper (nsis7z.cpp, vcxproj, …) lives in versions/zstd/.
+The NSIS plugin wrapper (nsis7z.cpp, vcxproj, …) lives in versions/zstd-bundle/.
 
 NOTE: VS2026 Build Tools use v145 toolset (version 18.x)
 """
@@ -201,7 +201,7 @@ def find_msbuild(vs_version: str = 'auto') -> 'Optional[Tuple[Path, str, str]]':
 def get_project_paths(toolset: str = 'v145') -> Tuple[Path, Path, Path]:
     """Get project directory, project file, and plugins directory"""
     script_dir = Path(__file__).parent.absolute()
-    project_dir = script_dir.parent.parent / 'versions' / 'zstd'
+    project_dir = script_dir.parent.parent / 'versions' / 'zstd-bundle'
     vcxproj = 'Nsis7z_vs2026.vcxproj'
     project_file = project_dir / 'CPP' / '7zip' / 'Bundles' / 'Nsis7z' / vcxproj
     plugins_dir = script_dir.parent.parent / 'plugins'

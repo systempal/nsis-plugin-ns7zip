@@ -29,7 +29,7 @@ SUPPORTED = {"25.01", "26.00", "26.01", "zstd"}
 # project-owned sources (NSIS UI, wrapper cpp files, vcxproj).
 #
 # For zstd the 7-zip C++ sources live in the 7-zip-zstd submodule while our
-# NSIS wrapper sits in versions/zstd/.  make is run with -C pointing to the
+# NSIS wrapper sits in versions/zstd-bundle/.  make is run with -C pointing to the
 # wrapper dir and VENDOR_7ZIP overridden to the submodule tree so that
 # include/source rules resolve correctly without touching the submodule.
 VERSION_LAYOUT = {
@@ -48,8 +48,17 @@ VERSION_LAYOUT = {
     # zstd: make runs in our wrapper dir; vendor_7zip points to submodule tree.
     "zstd": {
         "vendor_7zip": ROOT / "versions" / "7-zip-zstd" / "CPP" / "7zip",
-        "bundle_dir":  ROOT / "versions" / "zstd" / "CPP" / "7zip" / "Bundles" / "Nsis7z",
+        "bundle_dir":  ROOT / "versions" / "zstd-bundle" / "CPP" / "7zip" / "Bundles" / "Nsis7z",
     },
+}
+
+# Per-version extra flags for GCC/MinGW cross-compilation that apply to both
+# C and C++ compilations.  Passed via LOCAL_FLAGS_EXTRA → merged into CFLAGS
+# and CXXFLAGS alike.
+VERSION_EXTRA_FLAGS: dict[str, str] = {
+    # fast-lzma2 (part of the 7-zip-zstd vendor) triggers -Wsign-compare and
+    # -Wcast-function-type on C code that was never compiled with GCC -Werror.
+    "zstd": "-Wno-sign-compare -Wno-cast-function-type",
 }
 
 # Per-version C++-only extra flags for GCC/MinGW cross-compilation.
@@ -67,6 +76,10 @@ VERSION_EXTRA_CXXFLAGS: dict[str, str] = {
     #     in the specific makefile rule for NsisExtractCallbackConsole.o.
     #   - Several unused parameters and sign-compare on UInt64 vs. literal -1.
     "25.01": "-Wno-sign-compare -Wno-unused-parameter",
+    # 7-zip-zstd NSIS UI code has the same unused-parameter issues as 25.01.
+    # sign-compare is in C code (fast-lzma2) and already in VERSION_EXTRA_FLAGS;
+    # unused-parameter warnings are C++-only (NSIS wrapper and nsis7z.cpp).
+    "zstd": "-Wno-unused-parameter",
 }
 
 CONFIGS = {
@@ -144,7 +157,7 @@ def _build_one(
     bundle_dir  = layout["bundle_dir"]
 
     # Symlinks are not committed to git; recreate them on Linux if missing.
-    if zip_version in VERSION_LAYOUT and zip_version != "zstd":
+    if zip_version in VERSION_LAYOUT:
         _ensure_bundle_symlinks(zip_version, bundle_dir, vendor_7zip)
 
     cfg = CONFIGS[cfg_name]
@@ -166,7 +179,8 @@ def _build_one(
     # Version-specific workarounds for vendor code that was MSVC-only.
     # Flags that are C++-only (e.g. -fpermissive) must go into LOCAL_CXXFLAGS_EXTRA
     # which the makefile appends only to CXXFLAGS, not to CFLAGS.
-    extra_cxx = VERSION_EXTRA_CXXFLAGS.get(zip_version, "")
+    extra_flags = VERSION_EXTRA_FLAGS.get(zip_version, "")
+    extra_cxx   = VERSION_EXTRA_CXXFLAGS.get(zip_version, "")
 
     # CXX_INCLUDE_FLAGS:
     #   1. overlay/include – case-sensitivity shims (Windows.h → windows.h, …)
@@ -178,6 +192,11 @@ def _build_one(
     # For bundle-based builds (zstd, 26.01) the UI/NSIS wrapper files live in
     # our bundle dir, not in the vendor tree.  Override NSIS_DIR accordingly.
     bundle_nsis = bundle_dir.parent.parent / "UI" / "NSIS"
+
+    # The 7-zip-zstd vendor calls LocalFileTimeToFileTime2() which is defined
+    # in MyWindows.cpp.  That TU is normally excluded from SYS_OBJS when
+    # IS_MINGW=1, so we must inject it back via EXTRA_SYS_OBJS.
+    extra_sys_objs = f"{out_dir}/MyWindows.o" if zip_version == "zstd" else ""
 
     base_cmd = [
         "make",
@@ -194,8 +213,9 @@ def _build_one(
         f"CC={triplet}-gcc",
         f"CXX={triplet}-g++",
         f"RC={triplet}-windres",
-        f"LOCAL_FLAGS_EXTRA={local_flags} -Wno-unknown-pragmas",
+        f"LOCAL_FLAGS_EXTRA={local_flags} -Wno-unknown-pragmas {extra_flags}".rstrip(),
         f"LOCAL_CXXFLAGS_EXTRA={extra_cxx}",
+        *([ f"EXTRA_SYS_OBJS={extra_sys_objs}" ] if extra_sys_objs else []),
         # Linux ld is case-sensitive; vendor makefile uses mixed-case lib names
         # (lUser32, lOle32, …) that don't exist on disk.  Override LIB2 with
         # fully-expanded lowercase equivalents.

@@ -73,9 +73,15 @@ CURRENT_OBJS = \
   $O/pluginapi.o \
   $O/nsis7z.o \
 
+# Optional extra system objects – pass from the command line when the vendor
+# requires additional translation units that are normally excluded for mingw
+# (e.g. MyWindows.o for the 7-zip-zstd variant).
+EXTRA_SYS_OBJS ?=
+
 OBJS = \
   $(ARC_OBJS) \
   $(SYS_OBJS) \
+  $(EXTRA_SYS_OBJS) \
   $(NSIS_UI_OBJS) \
   $(CURRENT_OBJS) \
 
