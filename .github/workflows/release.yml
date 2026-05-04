@@ -288,7 +288,7 @@ jobs:
           upload_names = {zip_name, "SHA256SUMS.txt"}
           for asset in existing:
             if asset["name"] in upload_names:
-              request("DELETE", f"/repos/{repo}/releases/assets/{asset['id']}", auth_scheme=auth_scheme)
+              request("DELETE", f"/repos/{repo}/releases/{rid}/assets/{asset['id']}", auth_scheme=auth_scheme)
               print(f"Deleted existing asset: {asset['name']}")
 
           # Carica ZIP e SHA256SUMS
