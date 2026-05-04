@@ -140,10 +140,7 @@ jobs:
             found && /^## / { exit }
             found { print }
           ' CHANGELOG.md > release_body.md
-          # Append Gitea notice
-          echo "" >> release_body.md
-          echo "---" >> release_body.md
-          echo "_Repository primario: vedi link Gitea nel README. Il mirror GitHub è generato automaticamente._" >> release_body.md
+
 
       - name: Package plugins ZIP
         id: pkg
