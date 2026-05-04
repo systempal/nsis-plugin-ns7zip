@@ -300,3 +300,21 @@ jobs:
               print(f"WARNING: {f} not found, skipping upload")
           PY
 
+      - name: Push back dist/ DLLs to Gitea
+        env:
+          GITEA_TOKEN: ${{ secrets.GITEA_TOKEN }}
+        run: |
+          tag="${{ steps.tag.outputs.tag }}"
+          # Copia le DLL compilate in dist/
+          for dir in amd64-unicode x86-ansi x86-unicode; do
+            mkdir -p "dist/$dir"
+            cp "dll-bundle/$dir/nsis7z.dll" "dist/$dir/nsis7z.dll"
+          done
+          # Configura git con le credenziali Gitea
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git remote add gitea "https://x-token:${GITEA_TOKEN}@gitea.emulab.it/Simone/nsis-plugin-ns7zip.git"
+          git add dist/
+          git diff --cached --quiet || git commit -m "chore: update dist/ DLLs for ${tag} [skip ci]"
+          git push gitea HEAD:main
+
