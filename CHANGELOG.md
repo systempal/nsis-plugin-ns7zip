@@ -7,6 +7,15 @@ e il progetto aderisce al [Semantic Versioning](https://semver.org/spec/v2.0.0.h
 
 ## [Unreleased]
 
+## [2.3.1] — 2026-05-05
+
+### Added
+- `tools/update_github_releases.py`: one-shot script to sync GitHub Release bodies via API using local `tools/release-notes/` snippets
+
+### Fixed
+- Linux overlay shims (`tools/linux/overlay/include/`) now use `#include_next` instead of `#include` to forward to the real MinGW system header, avoiding infinite preprocessor recursion on Linux/WSL (GCC 12+)
+- Removed stale prebuilt `plugins/*/nsis7z.dll` binaries from the repository
+
 ## [2.3.0] — 2026-05-03
 
 ### Added
@@ -83,7 +92,8 @@ e il progetto aderisce al [Semantic Versioning](https://semver.org/spec/v2.0.0.h
 - CI/CD via GitHub Actions (mirror automatico Gitea → GitHub)
 - Documentazione completa (README, CONTRIBUTING, SECURITY)
 
-[Unreleased]: https://gitea.emulab.it/Simone/nsis-plugin-ns7zip/compare/v2.3.0...HEAD
+[Unreleased]: https://gitea.emulab.it/Simone/nsis-plugin-ns7zip/compare/v2.3.1...HEAD
+[2.3.1]: https://gitea.emulab.it/Simone/nsis-plugin-ns7zip/compare/v2.3.0...v2.3.1
 [2.3.0]: https://gitea.emulab.it/Simone/nsis-plugin-ns7zip/compare/v2.2.2...v2.3.0
 [2.2.2]: https://gitea.emulab.it/Simone/nsis-plugin-ns7zip/compare/v2.2.1...v2.2.2
 [2.2.1]: https://gitea.emulab.it/Simone/nsis-plugin-ns7zip/compare/v2.2.0...v2.2.1
