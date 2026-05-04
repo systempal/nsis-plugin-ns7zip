@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 """
-One-shot script: aggiorna il body delle release Gitea esistenti
-con i file in tools/release-notes/.
+Script: sincronizza le release Gitea con i file in tools/release-notes/.
+- Se la release esiste → aggiorna il body
+- Se la release non esiste → la crea (richiede che il tag git esista già)
 
 Uso:
     GITEA_TOKEN=<token> python3 tools/update_gitea_releases.py
@@ -51,28 +52,43 @@ def main() -> None:
     if not args.token:
         sys.exit("Errore: token mancante. Usa --token oppure imposta GITEA_TOKEN.")
 
+    print("Recupero lista release da Gitea...", flush=True)
+    try:
+        releases = api("GET", f"/repos/{REPO}/releases?limit=50", args.token)
+    except urllib.error.HTTPError:
+        sys.exit("Errore nel recupero delle release.")
+
+    existing = {r["tag_name"]: r["id"] for r in releases}
+
     note_files = sorted(NOTES_DIR.glob("v*.md"))
     if not note_files:
         sys.exit(f"Nessun file trovato in {NOTES_DIR}")
 
     for note_path in note_files:
-        tag = note_path.stem  # es. v2.2.1
+        tag = note_path.stem
         body = note_path.read_text(encoding="utf-8").strip()
 
-        print(f"[{tag}] recupero release...", end=" ", flush=True)
-        try:
-            release = api("GET", f"/repos/{REPO}/releases/tags/{tag}", args.token)
-        except urllib.error.HTTPError:
-            print("SALTATO (release non trovata)")
-            continue
-
-        release_id = release["id"]
-        print(f"id={release_id}, aggiorno body...", end=" ", flush=True)
-        try:
-            api("PATCH", f"/repos/{REPO}/releases/{release_id}", args.token, {"body": body})
-            print("OK")
-        except urllib.error.HTTPError:
-            print("FALLITO")
+        if tag in existing:
+            release_id = existing[tag]
+            print(f"[{tag}] id={release_id}, aggiorno body...", end=" ", flush=True)
+            try:
+                api("PATCH", f"/repos/{REPO}/releases/{release_id}", args.token, {"body": body})
+                print("OK")
+            except urllib.error.HTTPError:
+                print("FALLITO")
+        else:
+            print(f"[{tag}] release non trovata, creo...", end=" ", flush=True)
+            try:
+                result = api("POST", f"/repos/{REPO}/releases", args.token, {
+                    "tag_name": tag,
+                    "name": tag,
+                    "body": body,
+                    "draft": False,
+                    "prerelease": False,
+                })
+                print(f"OK (id={result['id']})")
+            except urllib.error.HTTPError:
+                print("FALLITO (il tag git esiste su Gitea?)")
 
 
 if __name__ == "__main__":

@@ -83,7 +83,8 @@ e il progetto aderisce al [Semantic Versioning](https://semver.org/spec/v2.0.0.h
 - CI/CD via GitHub Actions (mirror automatico Gitea → GitHub)
 - Documentazione completa (README, CONTRIBUTING, SECURITY)
 
-[Unreleased]: https://gitea.emulab.it/Simone/nsis-plugin-ns7zip/compare/v2.2.2...HEAD
+[Unreleased]: https://gitea.emulab.it/Simone/nsis-plugin-ns7zip/compare/v2.3.0...HEAD
+[2.3.0]: https://gitea.emulab.it/Simone/nsis-plugin-ns7zip/compare/v2.2.2...v2.3.0
 [2.2.2]: https://gitea.emulab.it/Simone/nsis-plugin-ns7zip/compare/v2.2.1...v2.2.2
 [2.2.1]: https://gitea.emulab.it/Simone/nsis-plugin-ns7zip/compare/v2.2.0...v2.2.1
 [2.2.0]: https://gitea.emulab.it/Simone/nsis-plugin-ns7zip/compare/v2.1.0...v2.2.0
