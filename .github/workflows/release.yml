@@ -208,7 +208,8 @@ jobs:
               },
             )
             with urllib.request.urlopen(req) as resp:
-              return json.loads(resp.read().decode("utf-8"))
+              raw = resp.read()
+              return json.loads(raw) if raw else {}
 
           def upload_asset(rid, path, auth_scheme):
             p = Path(path)
@@ -231,7 +232,8 @@ jobs:
               },
             )
             with urllib.request.urlopen(req) as resp:
-              return json.loads(resp.read().decode("utf-8"))
+              raw = resp.read()
+              return json.loads(raw) if raw else {}
 
           auth_scheme = None
           last_error = None
