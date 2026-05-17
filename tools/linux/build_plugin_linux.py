@@ -151,6 +151,7 @@ def _build_one(
     jobs: int,
     clean: bool,
     cleanup_artifacts: bool,
+    dist: bool = False,
 ) -> int:
     layout = VERSION_LAYOUT[zip_version]
     vendor_7zip = layout["vendor_7zip"]
@@ -243,7 +244,10 @@ def _build_one(
         print(f"ERROR: expected artifact not found: {built}", file=sys.stderr)
         return 1
 
-    dest = ROOT / cfg["dest"]
+    rel_dest = cfg["dest"]
+    if dist and rel_dest.startswith("plugins/"):
+        rel_dest = "dist/" + rel_dest[len("plugins/"):]
+    dest = ROOT / rel_dest
     dest.parent.mkdir(parents=True, exist_ok=True)
     shutil.copy2(built, dest)
 
@@ -303,6 +307,12 @@ def main() -> int:
         help="Keep per-config build artifact directories (_o_*)",
     )
     parser.add_argument("--verbose", action="store_true", help="Verbose output")
+    parser.add_argument(
+        "--dist",
+        action="store_true",
+        help="Copy built DLLs to <repo>/dist/<config> instead of "
+             "<repo>/plugins/<config>",
+    )
     args = parser.parse_args()
 
     _require_tool("make")
@@ -327,6 +337,7 @@ def main() -> int:
             jobs,
             args.clean,
             args.cleanup_artifacts,
+            args.dist,
         )
         if code != 0:
             return code

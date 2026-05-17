@@ -630,6 +630,9 @@ Examples:
                         help='Disable additional build optimizations')
     parser.add_argument('--vs-version', choices=['auto', '2026', '2022'], default='auto',
                         help='Visual Studio version to use (default: auto)')
+    parser.add_argument('--dist', action='store_true',
+                        help='Copy built DLLs to <repo>/dist/<config> instead '
+                             'of <repo>/plugins/<config>')
 
     args = parser.parse_args()
 
@@ -642,6 +645,9 @@ Examples:
 
     # Get project paths
     project_dir, project_file, plugins_dir = get_project_paths(platform_toolset)
+    # --dist: redirect the output root from <repo>/plugins to <repo>/dist.
+    if args.dist:
+        plugins_dir = plugins_dir.parent / 'dist'
 
     if args.list_project:
         if not project_file.exists():
