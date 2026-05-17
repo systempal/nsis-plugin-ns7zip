@@ -350,9 +350,14 @@ def main() -> int:
     wanted = list(CONFIGS.keys()) if "all" in args.configs else args.configs
 
     if args.parallel and len(wanted) > 1:
-        # Split make jobs across configs so 3 concurrent makes don't
-        # oversubscribe the CPU (mirrors the Windows parallel build).
-        per_jobs = max(1, jobs // len(wanted))
+        # Each config gets the FULL make -j (no //nconfigs split). The
+        # configs are independent; mild CPU oversubscription is handled
+        # by the scheduler and is still far faster than serial — this is
+        # exactly what the Windows (MSBuild) parallel build does, which
+        # finishes in ~2min on the same vCPU/RAM. Splitting -j across
+        # configs neutered intra-config parallelism (on a 4-vCPU VM it
+        # became make -j1) and gave no speedup.
+        per_jobs = jobs
         print(
             f"[linux] Building {len(wanted)} configs in parallel "
             f"(make -j{per_jobs} each)"
