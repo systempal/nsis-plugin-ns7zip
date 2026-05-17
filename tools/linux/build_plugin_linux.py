@@ -15,7 +15,13 @@ import os
 import shutil
 import subprocess
 import sys
+import threading
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
+
+# Symlink creation is shared across configs; serialize it so parallel
+# per-config builds don't race recreating the bundle symlinks.
+_SYMLINK_LOCK = threading.Lock()
 
 ROOT = Path(__file__).resolve().parents[2]
 
@@ -158,8 +164,10 @@ def _build_one(
     bundle_dir  = layout["bundle_dir"]
 
     # Symlinks are not committed to git; recreate them on Linux if missing.
+    # Serialized: concurrent per-config builds would race here.
     if zip_version in VERSION_LAYOUT:
-        _ensure_bundle_symlinks(zip_version, bundle_dir, vendor_7zip)
+        with _SYMLINK_LOCK:
+            _ensure_bundle_symlinks(zip_version, bundle_dir, vendor_7zip)
 
     cfg = CONFIGS[cfg_name]
     triplet = cfg["triplet"]
@@ -313,6 +321,18 @@ def main() -> int:
         help="Copy built DLLs to <repo>/dist/<config> instead of "
              "<repo>/plugins/<config>",
     )
+    parser.add_argument(
+        "--parallel",
+        action="store_true",
+        default=True,
+        help="Build configs concurrently (default: True)",
+    )
+    parser.add_argument(
+        "--no-parallel",
+        action="store_false",
+        dest="parallel",
+        help="Build configs one at a time",
+    )
     args = parser.parse_args()
 
     _require_tool("make")
@@ -329,18 +349,47 @@ def main() -> int:
 
     wanted = list(CONFIGS.keys()) if "all" in args.configs else args.configs
 
-    for cfg_name in wanted:
-        code = _build_one(
-            args.zip_version,
-            cfg_name,
-            args.verbose,
-            jobs,
-            args.clean,
-            args.cleanup_artifacts,
-            args.dist,
+    if args.parallel and len(wanted) > 1:
+        # Split make jobs across configs so 3 concurrent makes don't
+        # oversubscribe the CPU (mirrors the Windows parallel build).
+        per_jobs = max(1, jobs // len(wanted))
+        print(
+            f"[linux] Building {len(wanted)} configs in parallel "
+            f"(make -j{per_jobs} each)"
         )
-        if code != 0:
-            return code
+        codes: dict[str, int] = {}
+        with ThreadPoolExecutor(max_workers=len(wanted)) as ex:
+            futs = {
+                ex.submit(
+                    _build_one,
+                    args.zip_version,
+                    c,
+                    args.verbose,
+                    per_jobs,
+                    args.clean,
+                    args.cleanup_artifacts,
+                    args.dist,
+                ): c
+                for c in wanted
+            }
+            for fut, name in futs.items():
+                codes[name] = fut.result()
+        for name in wanted:
+            if codes[name] != 0:
+                return codes[name]
+    else:
+        for cfg_name in wanted:
+            code = _build_one(
+                args.zip_version,
+                cfg_name,
+                args.verbose,
+                jobs,
+                args.clean,
+                args.cleanup_artifacts,
+                args.dist,
+            )
+            if code != 0:
+                return code
 
     print("[linux] Build completed")
     return 0
