@@ -16,6 +16,7 @@ import shutil
 import subprocess
 import sys
 import threading
+import time
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
@@ -269,6 +270,26 @@ def _build_one(
     return 0
 
 
+def _print_timing(
+    order: list[str],
+    codes: dict[str, int],
+    durations: dict[str, float],
+    wall: float,
+) -> None:
+    """Per-config + total wall-clock timing summary."""
+    print("\n" + "=" * 50)
+    print("[linux] Build timing")
+    print("-" * 50)
+    for cfg in order:
+        status = "OK  " if codes.get(cfg) == 0 else "FAIL"
+        secs = durations.get(cfg)
+        secs_s = f"{secs:6.1f}s" if secs is not None else "   N/A"
+        print(f"  {status} {cfg:<13} {secs_s}")
+    print("-" * 50)
+    print(f"  TOTAL wall clock        {wall:6.1f}s")
+    print("=" * 50)
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description="Linux build path for nsis7z")
     parser.add_argument(
@@ -363,28 +384,33 @@ def main() -> int:
             f"(make -j{per_jobs} each)"
         )
         codes: dict[str, int] = {}
+        durations: dict[str, float] = {}
+
+        def _timed(cfg: str, jb: int) -> None:
+            t0 = time.perf_counter()
+            codes[cfg] = _build_one(
+                args.zip_version, cfg, args.verbose, jb,
+                args.clean, args.cleanup_artifacts, args.dist,
+            )
+            durations[cfg] = time.perf_counter() - t0
+
+        wall0 = time.perf_counter()
         with ThreadPoolExecutor(max_workers=len(wanted)) as ex:
-            futs = {
-                ex.submit(
-                    _build_one,
-                    args.zip_version,
-                    c,
-                    args.verbose,
-                    per_jobs,
-                    args.clean,
-                    args.cleanup_artifacts,
-                    args.dist,
-                ): c
-                for c in wanted
-            }
-            for fut, name in futs.items():
-                codes[name] = fut.result()
+            futs = [ex.submit(_timed, c, per_jobs) for c in wanted]
+            for fut in futs:
+                fut.result()
+        wall = time.perf_counter() - wall0
+        _print_timing(wanted, codes, durations, wall)
         for name in wanted:
             if codes[name] != 0:
                 return codes[name]
     else:
+        codes = {}
+        durations = {}
+        wall0 = time.perf_counter()
         for cfg_name in wanted:
-            code = _build_one(
+            t0 = time.perf_counter()
+            codes[cfg_name] = _build_one(
                 args.zip_version,
                 cfg_name,
                 args.verbose,
@@ -393,8 +419,12 @@ def main() -> int:
                 args.cleanup_artifacts,
                 args.dist,
             )
-            if code != 0:
-                return code
+            durations[cfg_name] = time.perf_counter() - t0
+            if codes[cfg_name] != 0:
+                _print_timing(wanted, codes, durations,
+                              time.perf_counter() - wall0)
+                return codes[cfg_name]
+        _print_timing(wanted, codes, durations, time.perf_counter() - wall0)
 
     print("[linux] Build completed")
     return 0
