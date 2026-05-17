@@ -766,6 +766,8 @@ Examples:
         help='Visual Studio version to use (default: auto - tries 2026 then 2022)'
     )
 
+    parser.add_argument('--dist', action='store_true',
+                        help='Copy built DLLs to <repo>/dist/<config> instead of <repo>/plugins/<config>')
     args = parser.parse_args()
     
     # Find MSBuild early (needed for project path selection)
@@ -777,6 +779,9 @@ Examples:
 
     # Get project paths (project file depends on toolset)
     project_dir, project_file, plugins_dir = get_project_paths(platform_toolset)
+    # --dist: redirect output root from <repo>/plugins to <repo>/dist.
+    if args.dist:
+        plugins_dir = plugins_dir.parent / 'dist'
     
     # List project configurations
     if args.list_project:

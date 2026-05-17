@@ -747,10 +747,15 @@ Examples:
         help='Visual Studio version to use (default: auto - tries 2026 then 2022)'
     )
 
+    parser.add_argument('--dist', action='store_true',
+                        help='Copy built DLLs to <repo>/dist/<config> instead of <repo>/plugins/<config>')
     args = parser.parse_args()
     
     # Get project paths early for list-project
     project_dir, project_file, plugins_dir = get_project_paths()
+    # --dist: redirect output root from <repo>/plugins to <repo>/dist.
+    if args.dist:
+        plugins_dir = plugins_dir.parent / 'dist'
     
     # List project configurations
     if args.list_project:
