@@ -146,6 +146,7 @@ def _find_msbuild_via_vswhere(vs_version: str) -> 'Optional[Tuple[Path, str, str
                     str(_VSWHERE_PATH),
                     '-version', _VS_VERSION_RANGE[ver],
                     '-latest',
+                    '-prerelease',
                     '-requires', 'Microsoft.Component.MSBuild',
                     '-find', r'MSBuild\**\Bin\MSBuild.exe',
                 ],
